@@ -25,6 +25,28 @@ from PIL import Image
 LADO_LARGO = 2048
 
 
+def miniaturas(carpeta, indice, alto=200):
+    """Miniaturas chicas para el selector de modelos de la app.
+
+    Blanco sobre transparente: asi la miniatura se ve igual que el pano sobre la
+    foto, metal claro y agujeros que dejan pasar el fondo, y encima pesa nada.
+    """
+    destino = carpeta / "thumbs"
+    destino.mkdir(exist_ok=True)
+    for m in indice:
+        png = cairosvg.svg2png(
+            url=str(carpeta / m["archivo"]),
+            output_height=alto,
+            output_width=max(1, round(alto * m["ancho"] / m["alto"])),
+        )
+        im = Image.open(io.BytesIO(png)).convert("LA")
+        # el SVG pinta el metal de negro; en la app el metal es claro
+        canal_a = im.split()[1]
+        salida = Image.merge("LA", (Image.new("L", im.size, 255), canal_a))
+        salida.save(destino / f"{m['id']}.png", optimize=True)
+        m["thumb"] = f"thumbs/{m['id']}.png"
+
+
 def main():
     carpeta = Path(sys.argv[1] if len(sys.argv) > 1 else "public/modelos")
     indice = json.loads((carpeta / "indice.json").read_text())
@@ -103,6 +125,7 @@ def main():
         m["mascaraAlto"] = h
         m["areaLibre"] = round(area_libre, 4)
 
+    miniaturas(carpeta, indice)
     (carpeta / "indice.json").write_text(json.dumps(indice, indent=2, ensure_ascii=False))
 
     print(f"{len(indice)} mascaras de {LADO_LARGO} px de lado largo\n")
@@ -120,3 +143,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
