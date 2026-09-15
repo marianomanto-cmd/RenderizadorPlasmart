@@ -1,0 +1,17 @@
+{
+  "name": "Plasmart · Renderizador de celosías",
+  "short_name": "Celosías",
+  "description": "Mostrale al cliente cómo queda la celosía sobre la foto de su propio frente.",
+  "lang": "es-AR",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#08090b",
+  "theme_color": "#08090b",
+  "icons": [
+    { "src": "/marca/favicon.png", "sizes": "any", "type": "image/png" },
+    { "src": "/marca/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "/marca/apple-touch-icon.png", "sizes": "180x180", "type": "image/png", "purpose": "maskable" }
+  ]
+}

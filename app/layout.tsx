@@ -5,6 +5,11 @@ export const metadata: Metadata = {
   title: 'Plasmart · Renderizador de celosías',
   description: 'Mostrale al cliente cómo queda la celosía sobre la foto de su propio frente.',
   icons: { icon: '/marca/favicon.png', apple: '/marca/apple-touch-icon.png' },
+  manifest: '/manifest.webmanifest',
+  // Instalada en la pantalla de inicio, iOS deja de desalojar los datos
+  // guardados y la app abre sin la barra de Safari. Es condición para que el
+  // paso 6 (andar sin señal) tenga dónde apoyarse.
+  appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: 'Celosías' },
 }
 
 export const viewport: Viewport = {
