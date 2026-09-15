@@ -320,9 +320,12 @@ estructura. Es lo que hace cualquier motor de texturas desde hace cuarenta años
 Proyecto de Vercel `renderizador-plasmart`, enganchado al repo. Cada push a la
 rama genera un preview; la rama de producción es `main`.
 
-**El alias estable de la rama es
-`renderizador-plasmart-git-cla-7670f9-marianomanto-cmds-projects.vercel.app`** y
-siempre apunta al último push.
+**Producción: `https://renderizador-plasmart.vercel.app`** — `main`, pública,
+sin login.
+
+El alias de la rama de trabajo es
+`renderizador-plasmart-git-cla-7670f9-marianomanto-cmds-projects.vercel.app` y
+siempre apunta al último push de esa rama.
 
 Dos cosas que costaron y conviene no volver a tropezar:
 
@@ -330,11 +333,11 @@ Dos cosas que costaron y conviene no volver a tropezar:
    tenía solo un README, así que Vercel nunca detectó Next.js: el build salía
    perfecto y generaba la página, pero servirla daba 404. Se arregla con
    `vercel.json` en el repo, que además queda versionado.
-2. **Los previews están detrás del login de Vercel** (protección SSO del equipo,
-   activada para todo salvo dominios propios). Para probar en un teléfono hay
-   que iniciar sesión en Vercel una vez en Safari, o pedir un enlace de acceso
-   temporal, o desactivar la protección para previews. Lo último los deja
-   públicos para cualquiera con el link.
+2. **Los previews estaban detrás del login de Vercel** (protección SSO del
+   equipo). Eso hacía imposible probar en un teléfono, y sobre todo instalarla
+   en la pantalla de inicio, que es como hay que probarla. **Se desactivó**: las
+   URLs son públicas para cualquiera que tenga el link. Es un prototipo sin
+   datos de clientes; cuando entren cuentas y obras reales hay que revisarlo.
 
 ## Estado del plan
 
@@ -371,6 +374,16 @@ por los DXF y no cambia nada más: `lib/pattern` ya trabaja contra máscaras.
 
 ### Pendiente de recibir
 
-- **El prototipo HTML.** Bloquea el incremento 3.
-- **Si hacen aluminio o no.**
+- **Si hacen aluminio o no.** El catálogo lista acero, inoxidable y galvanizado.
 - **Qué modo de ajuste va por defecto** (hay recomendación arriba).
+- **Cómo se ve al sol**, probado en la calle. Es lo único que puede obligar a
+  discutir el tema oscuro.
+
+### Ya no hace falta: el prototipo HTML
+
+El brief prometía un prototipo de una página que validaba la matemática, para
+usarlo como especificación ejecutable. **Se descarta como pendiente**, por dos
+motivos: la matemática ya está escrita y probada con 97 tests contra resultados
+analíticos exactos, y el encuadre cambió — esto muestra cómo queda y no cotiza,
+así que comprobar paridad al decimal con un prototipo viejo dejó de tener
+sentido. Si aparece, se mira; no bloquea nada.
