@@ -19,3 +19,5 @@ export {
   DIBUJO_ENTERO,
   SIN_MARCO,
 } from './ajuste.js'
+export type { Piramide } from './piramide.js'
+export { construirPiramide, coberturaEnNivel } from './piramide.js'

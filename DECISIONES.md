@@ -238,6 +238,49 @@ comprueba.
 
 ---
 
+## Rendimiento del render, medido
+
+Paño de 714 x 420 px sobre una foto de 1200 x 800, modelo B.01, en este
+contenedor. Un teléfono de gama media es unas 4 veces más lento.
+
+| Resolución | Calidad | ms | cuadros/s aquí | estimado en teléfono |
+|---|---|---|---|---|
+| 50% | arrastrando | 8,1 | 123 | **~31/s** |
+| 75% | arrastrando | 17,8 | 56 | ~14/s |
+| 100% | arrastrando | 31,0 | 32 | ~8/s |
+| 100% | al soltar | 31,3 | 32 | ~8/s |
+
+**La estrategia que sale de esos números:** arrastrar a media resolución, soltar a
+resolución completa. No hizo falta ninguna API nueva para renderizar más chico,
+porque las esquinas se guardan normalizadas: se le pasa la mitad del tamaño de
+foto y listo.
+
+Dos cosas bajaron el costo, en orden de importancia:
+
+1. **Supermuestrear solo en el borde.** El detalle del dibujo lo resuelve la
+   pirámide, así que adentro del paño una muestra alcanza; las nueve solo hacen
+   falta en la franja de un píxel del borde. Pagarlas en todo el paño era casi
+   todo el costo: al soltar pasó de 202 ms a 31 ms, seis veces y media.
+2. **Sacar las asignaciones del bucle.** Llamar a `aplicarInversa()` por muestra
+   creaba un objeto `{u,v}` cada vez, un millón y medio por cuadro.
+
+Todavía no se midió en un teléfono real. Los números de arriba son una
+estimación con un factor 4, y hay que confirmarlos antes de dar nada por bueno.
+
+## La pirámide de máscaras, y por qué hizo falta
+
+La máscara tiene 2048 píxeles de ancho y en pantalla el paño ocupa unos 600. Un
+píxel de pantalla cubre entonces varios agujeros, y muestrear ahí da muaré:
+bandas y remolinos que no existen en la chapa. No es un caso raro, es el caso
+normal.
+
+El primer intento promediaba todo a un número. Arreglaba el muaré pero **borraba
+el dibujo**: arrastrando, el paño salía gris parejo y el vendedor no veía nada.
+
+La solución es guardar el dibujo también a la mitad, a un cuarto, a un octavo, y
+leer el nivel que corresponde al tamaño en pantalla. Así el promedio conserva la
+estructura. Es lo que hace cualquier motor de texturas desde hace cuarenta años.
+
 ## Estado del plan
 
 - [x] **0 · Andamio** — TypeScript estricto, vitest, fast-check
@@ -245,7 +288,7 @@ comprueba.
 - [ ] **0b · Prueba de Google en iPhone** — media jornada, antes de construir encima
 - [x] **2 · `lib/pattern`** — 63 modelos extraídos del PDF, tres modos, 67 tests
 - [ ] **3 · `lib/takeoff`** — falta el prototipo HTML para comprobar paridad
-- [ ] **4 · `lib/render`** + `medirFidelidad`
+- [x] **4 · `lib/render`** — 83 tests, medido. Falta `medirFidelidad` (fase 2)
 - [ ] **5 · Pantalla, sin backend**
 - [ ] **6 · PWA y offline**
 - [ ] **7 · Supabase: esquema, permisos, login**
