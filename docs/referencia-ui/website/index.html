@@ -1,0 +1,115 @@
+<!-- @dsCard group="Website" viewport="1280x760" name="Plasmart — Signal site" subtitle="Full long-scroll landing: hero, applications, capabilities, projects, contact" -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plasmart — Corte de acero</title>
+<link rel="stylesheet" href="../../design-system/styles.css">
+<style>
+  body { background: var(--bg); position: relative; }
+  body::before { content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none; background: radial-gradient(120% 70% at 50% -10%, var(--accent-12), transparent 60%); }
+  body::after { content: ""; position: fixed; inset: -50%; z-index: 9000; pointer-events: none; opacity: .04; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  #app { position: relative; z-index: 1; }
+  @media (max-width: 900px) { .nav-mid { display: none !important; } }
+</style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script src="../../design-system/_ds_bundle.js"></script>
+
+  <script type="text/babel" src="Nav.jsx"></script>
+  <script type="text/babel" src="Hero.jsx"></script>
+  <script type="text/babel" src="Manifesto.jsx"></script>
+  <script type="text/babel" src="Applications.jsx"></script>
+  <script type="text/babel" src="Capabilities.jsx"></script>
+  <script type="text/babel" src="Projects.jsx"></script>
+  <script type="text/babel" src="Contact.jsx"></script>
+  <script type="text/babel" src="Footer.jsx"></script>
+
+  <script type="text/babel">
+    const { Icon } = window.PlasmartDesignSystem_e9cdad;
+
+    function Loader({ onDone }) {
+      const [n, setN] = React.useState(0);
+      const [gone, setGone] = React.useState(false);
+      React.useEffect(() => {
+        const start = performance.now();
+        let raf;
+        const tick = (t) => {
+          const p = Math.min(1, (t - start) / 1700);
+          const eased = 1 - Math.pow(1 - p, 3);
+          setN(Math.round(eased * 100));
+          if (p < 1) raf = requestAnimationFrame(tick);
+          else { setTimeout(() => { setGone(true); setTimeout(onDone, 800); }, 250); }
+        };
+        raf = requestAnimationFrame(tick);
+        return () => cancelAnimationFrame(raf);
+      }, []);
+      return (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 9700, background: "var(--bg)",
+          display: "flex", alignItems: "flex-end", justifyContent: "space-between",
+          padding: "var(--pad)", transform: gone ? "translateY(-100%)" : "none",
+          transition: "transform 1s var(--ease)",
+        }}>
+          <div style={{ fontWeight: 200, fontSize: "clamp(80px,20vw,280px)", lineHeight: 0.8, letterSpacing: "-.05em" }}>{n}</div>
+          <div className="mono" style={{ paddingBottom: 12, textTransform: "uppercase", letterSpacing: ".2em" }}>Plasmart · Signal</div>
+          <div style={{ position: "absolute", left: 0, bottom: 0, height: 1, width: n + "%", background: "var(--text)" }} />
+        </div>
+      );
+    }
+
+    function WaFloat() {
+      const [h, setH] = React.useState(false);
+      return (
+        <a href="#" onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
+           style={{
+             position: "fixed", right: 22, bottom: 22, zIndex: 360, width: 58, height: 58,
+             borderRadius: "50%", display: "grid", placeItems: "center",
+             background: h ? "var(--accent)" : "rgba(17,20,25,.9)",
+             border: "1px solid " + (h ? "var(--accent)" : "var(--line-2)"),
+             color: h ? "#fff" : "var(--text)", backdropFilter: "blur(8px)",
+             transform: h ? "translateY(-3px)" : "none", transition: "all .35s var(--ease)",
+           }}>
+          <Icon name="whatsapp" size={26} />
+          <span style={{ position: "absolute", top: 8, right: 8, width: 8, height: 8, borderRadius: "50%", background: "#25d366", boxShadow: "0 0 8px #25d366" }} />
+        </a>
+      );
+    }
+
+    function App() {
+      const [loading, setLoading] = React.useState(true);
+      const [scrolled, setScrolled] = React.useState(false);
+      const ref = React.useRef(null);
+      React.useEffect(() => {
+        const el = ref.current;
+        const onScroll = () => setScrolled((el ? el.scrollTop : window.scrollY) > 40);
+        const target = el || window;
+        target.addEventListener("scroll", onScroll);
+        return () => target.removeEventListener("scroll", onScroll);
+      }, []);
+      return (
+        <div ref={ref} style={{ height: "100vh", overflowY: "auto", overflowX: "hidden", position: "relative" }}>
+          {loading && <Loader onDone={() => setLoading(false)} />}
+          <Nav scrolled={scrolled} />
+          <Hero />
+          <Manifesto />
+          <Applications />
+          <Capabilities />
+          <Projects />
+          <Contact />
+          <Footer />
+          <WaFloat />
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("app")).render(<App />);
+  </script>
+</body>
+</html>

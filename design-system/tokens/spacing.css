@@ -1,0 +1,53 @@
+/* ============================================================
+   PLASMART — Spacing, layout, radii & shadow tokens
+   Generous air. Hairline borders. Tiny radii (4–6px).
+   No drama shadows — the only "shadow" is an indigo glow.
+   ============================================================ */
+:root {
+  /* ---- Layout ---- */
+  --maxw: 1480px;                       /* @kind spacing */
+  --pad:  clamp(20px, 4.5vw, 80px);     /* @kind spacing */
+
+  /* ---- Spacing scale ---- */
+  --space-1:  4px;    /* @kind spacing */
+  --space-2:  8px;    /* @kind spacing */
+  --space-3:  12px;   /* @kind spacing */
+  --space-4:  16px;   /* @kind spacing */
+  --space-5:  24px;   /* @kind spacing */
+  --space-6:  32px;   /* @kind spacing */
+  --space-7:  48px;   /* @kind spacing */
+  --space-8:  64px;   /* @kind spacing */
+  --space-9:  96px;   /* @kind spacing */
+
+  /* ---- Fluid section rhythm ---- */
+  --section-y:     clamp(80px, 13vh, 180px);   /* @kind spacing */
+  --section-y-lg:  clamp(120px, 22vh, 280px);  /* @kind spacing */
+
+  /* ---- Radii (intentionally small) ---- */
+  --radius-xs:   2px;   /* @kind radius */
+  --radius-sm:   4px;   /* @kind radius */
+  --radius-md:   6px;   /* @kind radius */
+  --radius-pill: 100px; /* @kind radius */
+
+  /* ---- Borders ---- */
+  --border-w: 1px;      /* @kind spacing */
+
+  /* ---- Shadows — restraint. Glow, not drop. ---- */
+  --shadow-none:  none;                            /* @kind shadow */
+  --glow-accent:  0 0 12px var(--accent-soft);     /* @kind shadow */
+  --glow-accent-sm: 0 0 8px var(--accent-soft);    /* @kind shadow */
+  --shadow-nav:   0 10px 30px rgba(0, 0, 0, .35);  /* @kind shadow */
+  --shadow-pop:   0 24px 60px rgba(0, 0, 0, .5);   /* @kind shadow */
+
+  /* ---- Motion ---- */
+  --ease:      cubic-bezier(.19, 1, .22, 1);  /* @kind other */
+  --ease-out:  cubic-bezier(.16, 1, .3, 1);   /* @kind other */
+  --dur-fast:  .25s;   /* @kind other */
+  --dur:       .35s;   /* @kind other */
+  --dur-slow:  .55s;   /* @kind other */
+  --dur-panel: .8s;    /* @kind other */
+
+  /* ---- Effects ---- */
+  --blur-glass: blur(12px);   /* @kind other */
+  --grain-opacity: .04;       /* @kind other */
+}

@@ -1,0 +1,54 @@
+/* ============================================================
+   PLASMART — Typography tokens
+   Sora carries everything; weight 200 at huge sizes is the
+   signature. Tight negative tracking. JetBrains Mono for
+   uppercase labels, indices, specs and data.
+   ============================================================ */
+:root {
+  /* ---- Families ---- */
+  --font-display: "Sora", system-ui, -apple-system, sans-serif;     /* @kind font */
+  --font-mono:    "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace; /* @kind font */
+
+  /* ---- Weights ---- */
+  --fw-thin:    200;   /* @kind font */
+  --fw-light:   300;   /* @kind font */
+  --fw-regular: 400;   /* @kind font */
+  --fw-medium:  500;   /* @kind font */
+  --fw-semi:    600;   /* @kind font */
+
+  /* ---- Fluid display scale (all clamp, responsive) ---- */
+  --fs-hero:     clamp(44px, 9vw, 150px);   /* @kind font */
+  --fs-display:  clamp(44px, 11vw, 200px);  /* @kind font */
+  --fs-h1:       clamp(34px, 5.6vw, 88px);  /* @kind font */
+  --fs-h2:       clamp(30px, 4vw, 62px);    /* @kind font */
+  --fs-h3:       clamp(28px, 3.4vw, 52px);  /* @kind font */
+  --fs-mani:     clamp(28px, 4.4vw, 72px);  /* @kind font */
+  --fs-stat:     clamp(40px, 6vw, 90px);    /* @kind font */
+
+  /* ---- Body scale ---- */
+  --fs-lead:  clamp(17px, 1.5vw, 21px);     /* @kind font */
+  --fs-body:  17px;                          /* @kind font */
+  --fs-sm:    15px;                          /* @kind font */
+  --fs-xs:    14px;                          /* @kind font */
+
+  /* ---- Mono / label scale ---- */
+  --fs-mono:       12px;   /* @kind font */
+  --fs-mono-sm:    11px;   /* @kind font */
+  --fs-mono-lg:    13px;   /* @kind font */
+
+  /* ---- Line heights ---- */
+  --lh-hero:    .94;    /* @kind font */
+  --lh-tight:   .98;    /* @kind font */
+  --lh-snug:    1.12;   /* @kind font */
+  --lh-body:    1.55;   /* @kind font */
+  --lh-relaxed: 1.6;    /* @kind font */
+
+  /* ---- Letter spacing ---- */
+  --ls-mega:   -.05em;   /* @kind font */
+  --ls-hero:   -.04em;   /* @kind font */
+  --ls-tight:  -.035em;  /* @kind font */
+  --ls-snug:   -.03em;   /* @kind font */
+  --ls-body:   -.01em;   /* @kind font */
+  --ls-label:   .1em;    /* @kind font */
+  --ls-kicker:  .22em;   /* @kind font */
+}

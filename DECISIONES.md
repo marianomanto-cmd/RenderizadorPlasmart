@@ -144,20 +144,54 @@ medición formal. Pero hay que elegir qué hace la app, y son tres cosas distint
 
 ## Sistema de diseño
 
-Sacado del PDF del catálogo.
+**Corrección.** Antes de tener el handoff, saqué la paleta del PDF del catálogo:
+dorado `#B9802E` sobre gris claro, con Barlow Condensed. **Eso estaba mal.** El
+catálogo es material impreso; la marca digital es otra cosa. El sistema real,
+que llegó como handoff completo, se llama "Signal" y está instalado en
+`design-system/`.
 
 | Rol | Valor |
 |-----|-------|
-| Dorado de marca | `#B9802E` |
-| Gris de fondo | `#DEDEDF` |
-| Negro | `#000000` |
-| Blanco | `#FFFFFF` |
-| Tipografía principal | Barlow Condensed (Regular y Bold), gratis en Google Fonts |
-| Tipografía de acento | Bodoni MT Condensed Bold Italic, solo para la palabra "Línea" |
+| Fondo de página | `#08090b` |
+| Fondo hundido / modales | `#0d0f13` |
+| Paneles y cards | `#111419` |
+| Texto principal | `#eef0f3` |
+| Texto secundario | `#8a8f99` |
+| Texto terciario | `#4f545d` |
+| Acento único | índigo `#6e7bff` |
+| Hairlines | `rgba(255,255,255,.10)` |
+| Tipografía | Sora (200 en grande, 400 en cuerpo) |
+| Datos y etiquetas | JetBrains Mono, mayúsculas |
 
-Tono: limpio, mucho aire, los paños siempre en negro sobre gris claro.
+Reglas duras: **oscuro solamente**, sin tema claro ni interruptor. Un solo
+acento, usado con gotero y nunca como fondo de bloque. Hairlines en vez de
+cajas, radios chicos, sin sombras salvo el glow índigo. Sin emoji, solo flechas.
+Copy en español rioplatense con voseo. Coma decimal.
 
----
+El handoff trae `APP_PATTERNS.md`, que es lo importante para nosotros: el
+sistema base es de marketing y ahí están las reglas para extenderlo a
+formularios, listas, modales y navegación sin romper el look. Distingue dos
+registros: **marca** (login, vacíos, onboarding: tipografía grande, aire, grano)
+y **trabajo** (listas y formularios: escala chica, nada arriba de 34px salvo una
+cifra protagonista).
+
+### Dos cosas que este sistema obliga a decidir
+
+**1. Los colores del material no son tokens, y es a propósito.**
+`COLOR_MATERIAL` en `lib/render` tiene los colores del acero, el galvanizado y
+el inoxidable. Son el color físico de una chapa dibujada sobre una foto, o sea
+contenido y no interfaz. Si fueran tokens, el paño cambiaría de color al
+retocar la paleta, y el paño tiene que verse como la chapa que se va a cortar.
+Queda declarado como la única excepción a "cero hex literales".
+
+**2. El tema oscuro contra el sol de Córdoba.**
+Esta app se usa parada en la vereda al sol, que es la peor condición para una
+pantalla oscura: el reflejo suma un piso de luminancia y el contraste efectivo
+se desploma. No se toca la marca; se compensa adentro del sistema — el texto que
+el vendedor necesita leer va en `--text` y nunca en `--muted`, `--faint` no se
+usa afuera, y las manijas de las esquinas van bien por encima de los 44 px.
+**Hay que confirmarlo en la calle, con sol, antes de dar la pantalla por
+terminada.**
 
 ## Fotos de referencia
 

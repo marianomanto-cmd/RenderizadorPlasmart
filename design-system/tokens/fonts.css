@@ -1,0 +1,7 @@
+/* ============================================================
+   PLASMART — Webfonts
+   Sora (display, thin 200 is the signature weight) + JetBrains Mono (labels/data).
+   Both are free Google Fonts; loaded via the Google Fonts CSS API, which
+   serves the @font-face rules and woff2 binaries.
+   ============================================================ */
+@import url("https://fonts.googleapis.com/css2?family=Sora:wght@200;300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");

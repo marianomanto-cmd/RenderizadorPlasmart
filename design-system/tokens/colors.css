@@ -1,0 +1,53 @@
+/* ============================================================
+   PLASMART — Color tokens
+   "Signal" palette: space-black surfaces, near-white text,
+   one disciplined indigo accent used like an eyedropper.
+   Dark is the only theme — the brand is born dark.
+   ============================================================ */
+:root {
+  /* ---- Base surfaces (space black) ---- */
+  --bg:    #08090b;   /* page background */
+  --bg-2:  #0d0f13;   /* recessed / modal background */
+  --panel: #111419;   /* cards, image wells, raised panels */
+
+  /* ---- Base text ---- */
+  --text:  #eef0f3;   /* primary text (near-white) */
+  --muted: #8a8f99;   /* secondary text, labels */
+  --faint: #4f545d;   /* tertiary text, disabled, indices */
+
+  /* ---- Hairlines ---- */
+  --line:   rgba(255, 255, 255, .10);  /* default 1px divider */
+  --line-2: rgba(255, 255, 255, .20);  /* stronger border / control outline */
+
+  /* ---- Accent (indigo "signal") ---- */
+  --accent:      #6e7bff;
+  --accent-soft: rgba(110, 123, 255, .6);   /* glows, soft fills */
+  --accent-12:   rgba(110, 123, 255, .12);  /* ambient wash, hover tints */
+
+  /* ---- Fixed brand constants ---- */
+  --white: #ffffff;
+  --wa-green: #25d366;  /* WhatsApp presence dot — the only non-indigo accent */
+
+  /* ============================================================
+     Semantic aliases — reference these in components
+     ============================================================ */
+  --surface-page:    var(--bg);
+  --surface-sunken:  var(--bg-2);
+  --surface-card:    var(--panel);
+
+  --text-strong:     var(--text);
+  --text-body:       var(--muted);
+  --text-faint:      var(--faint);
+  --text-on-accent:  #ffffff;
+
+  --border-hairline: var(--line);
+  --border-strong:   var(--line-2);
+  --border-accent:   var(--accent);
+
+  --brand:           var(--accent);
+  --brand-glow:      var(--accent-soft);
+  --focus-ring:      var(--accent);
+
+  --selection-bg:    var(--accent);
+  --selection-fg:    #ffffff;
+}
