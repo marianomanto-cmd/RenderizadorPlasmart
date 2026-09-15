@@ -315,15 +315,36 @@ La solución es guardar el dibujo también a la mitad, a un cuarto, a un octavo,
 leer el nivel que corresponde al tamaño en pantalla. Así el promedio conserva la
 estructura. Es lo que hace cualquier motor de texturas desde hace cuarenta años.
 
+## Despliegue
+
+Proyecto de Vercel `renderizador-plasmart`, enganchado al repo. Cada push a la
+rama genera un preview; la rama de producción es `main`.
+
+**El alias estable de la rama es
+`renderizador-plasmart-git-cla-7670f9-marianomanto-cmds-projects.vercel.app`** y
+siempre apunta al último push.
+
+Dos cosas que costaron y conviene no volver a tropezar:
+
+1. **El proyecto quedó con `framework: null`.** Se había creado cuando el repo
+   tenía solo un README, así que Vercel nunca detectó Next.js: el build salía
+   perfecto y generaba la página, pero servirla daba 404. Se arregla con
+   `vercel.json` en el repo, que además queda versionado.
+2. **Los previews están detrás del login de Vercel** (protección SSO del equipo,
+   activada para todo salvo dominios propios). Para probar en un teléfono hay
+   que iniciar sesión en Vercel una vez en Safari, o pedir un enlace de acceso
+   temporal, o desactivar la protección para previews. Lo último los deja
+   públicos para cualquiera con el link.
+
 ## Estado del plan
 
 - [x] **0 · Andamio** — TypeScript estricto, vitest, fast-check
 - [x] **1 · `lib/units` + `lib/geometry`** — 42 tests en verde
 - [ ] **0b · Prueba de Google en iPhone** — media jornada, antes de construir encima
 - [x] **2 · `lib/pattern`** — 63 modelos extraídos del PDF, tres modos, 67 tests
-- [ ] **3 · `lib/takeoff`** — falta el prototipo HTML para comprobar paridad
+- [x] **3 · `lib/takeoff`** — 14 tests. Falta el prototipo HTML para comprobar paridad con tus cuentas
 - [x] **4 · `lib/render`** — 83 tests, medido. Falta `medirFidelidad` (fase 2)
-- [ ] **5 · Pantalla, sin backend**
+- [x] **5 · Pantalla, sin backend** — desplegada, 97 tests
 - [ ] **6 · PWA y offline**
 - [ ] **7 · Supabase: esquema, permisos, login**
 - [ ] **8 · Sincronización y archivos**
