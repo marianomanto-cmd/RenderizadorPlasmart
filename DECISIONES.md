@@ -37,10 +37,10 @@ queda como que improvisa. **Lo que protege el determinismo es que le crean.**
 | 9 | Catálogo | Sale del PDF oficial. 63 modelos en 4 líneas |
 | 10 | Paso y abertura | `paso` = centro a centro, `abertura` = ancho del agujero. **Ver el hallazgo de abajo: casi no aplica** |
 | 11 | Borde | Macizo sin perforar, 30 mm por defecto, ajustable por modelo |
-| 12 | Chapa | 1000 × 2000 mm por defecto, y 1220 × 2440 mm |
+| 12 | Chapa | 1000 × 2000, 1220 × 2440 y 1500 × 3000. Por defecto elige la que necesita menos paños; con empate gana la más chica, que desperdicia menos |
 | 13 | Números en pantalla | Los cuatro a la vista (superficie, área libre, peso, chapas y recorte), rotulados "estimado" |
 | 14 | Color | Es el material, no un dato aparte |
-| 15 | Paños por foto | Uno en pantalla. El modelo de datos y la matemática soportan varios desde el día uno |
+| 15 | Paños por foto | **Varios.** Una fachada tiene paño, pared, paño. Se marcan de a uno, cada uno con su modelo, material y despiece, y los números de arriba son los del conjunto |
 
 ### Unidades
 
@@ -378,7 +378,7 @@ Dos cosas que costaron y conviene no volver a tropezar:
 - [x] **2 · `lib/pattern`** — 63 modelos extraídos del PDF, tres modos, 67 tests
 - [x] **3 · `lib/takeoff`** — 14 tests. Falta el prototipo HTML para comprobar paridad con tus cuentas
 - [x] **4 · `lib/render`** — 83 tests, medido. Falta `medirFidelidad` (fase 2)
-- [x] **5 · Pantalla, sin backend** — desplegada, 97 tests
+- [x] **5 · Pantalla, sin backend** — desplegada, con varios paños por foto
 - [ ] **6 · PWA y offline**
 - [ ] **7 · Supabase: esquema, permisos, login**
 - [ ] **8 · Sincronización y archivos**

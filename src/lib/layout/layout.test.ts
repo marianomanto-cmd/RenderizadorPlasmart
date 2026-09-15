@@ -162,3 +162,40 @@ describe('el texto que lee el vendedor', () => {
       .toBe('1 paño de 80 × 90 cm')
   })
 })
+
+describe('la chapa de 1500 × 3000', () => {
+  const CHAPA_1500 = FORMATOS[2]!
+
+  it('está en el catálogo de formatos', () => {
+    expect(CHAPA_1500.nombre).toBe('1500 × 3000')
+    expect(CHAPA_1500.ancho).toBe(1500)
+    expect(CHAPA_1500.alto).toBe(3000)
+  })
+
+  it('también es 1:2, así que los modelos entran enteros', () => {
+    const p = medidaDelPano(CHAPA_1500, PROP_1A2)
+    expect(p.ancho).toBe(1500)
+    expect(p.alto).toBe(3000)
+  })
+
+  it('cubre la misma pared con menos paños', () => {
+    const ancho = desdeCm(350)
+    const alto = desdeCm(280)
+    expect(despiezar(ancho, alto, CHAPA_1000, PROP_1A2).total).toBe(8) // 4 x 2
+    expect(despiezar(ancho, alto, CHAPA_1500, PROP_1A2).total).toBe(3) // 3 x 1
+  })
+
+  it('y la elige sola cuando conviene', () => {
+    expect(mejorFormato(desdeCm(350), desdeCm(280), PROP_1A2).nombre).toBe('1500 × 3000')
+  })
+
+  it('pero no cuando la pared es chica: gana la que desperdicia menos', () => {
+    // Una pared de 0,90 x 1,80 entra en cualquiera. Con empate a un paño gana
+    // la más chica, que desperdicia mucho menos chapa.
+    const chica = despiezar(desdeCm(90), desdeCm(180), CHAPA_1000, PROP_1A2)
+    const grande = despiezar(desdeCm(90), desdeCm(180), CHAPA_1500, PROP_1A2)
+    expect(chica.total).toBe(grande.total)
+    expect(chica.desperdicio).toBeLessThan(grande.desperdicio)
+    expect(mejorFormato(desdeCm(90), desdeCm(180), PROP_1A2).nombre).toBe('1000 × 2000')
+  })
+})

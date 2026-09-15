@@ -25,6 +25,7 @@ export interface FormatoChapa {
 export const FORMATOS: readonly FormatoChapa[] = [
   { nombre: '1000 × 2000', ancho: mm(1000), alto: mm(2000) },
   { nombre: '1220 × 2440', ancho: mm(1220), alto: mm(2440) },
+  { nombre: '1500 × 3000', ancho: mm(1500), alto: mm(3000) },
 ]
 
 /** Un paño individual dentro de la superficie. */
