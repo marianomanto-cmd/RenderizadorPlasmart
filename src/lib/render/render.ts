@@ -106,15 +106,19 @@ export function renderizarPano(e: EspecRender): Result<CapaPano, ErrorGeometria>
           const v = (id * mx + ie * my + if_) * iw
           if (v < 0 || v > 1) continue // fuera del paño
 
-          if (u < marcoU || u > 1 - marcoU || v < marcoV || v > 1 - marcoV) {
-            suma += 1 // el marco macizo del paño
-            continue
-          }
+          // Primero se averigua en qué paño cae el punto y dónde dentro de ese
+          // paño, y RECIÉN AHÍ se mide el marco: el borde macizo es de cada
+          // chapa, no del conjunto. Medirlo contra la superficie entera dejaría
+          // los paños del medio sin borde.
           let mu = escalaU * u + desplazU
           let mv = escalaV * v + desplazV
           if (repetir) {
             mu -= Math.floor(mu)
             mv -= Math.floor(mv)
+          }
+          if (mu < marcoU || mu > 1 - marcoU || mv < marcoV || mv > 1 - marcoV) {
+            suma += 1
+            continue
           }
           suma += coberturaEnNivel(piramide, huella, mu0 + mu * muRango, mv0 + mv * mvRango)
         }

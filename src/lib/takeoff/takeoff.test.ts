@@ -1,78 +1,56 @@
 import { describe, expect, it } from 'vitest'
+import { FORMATOS, despiezar } from '../layout/index.js'
 import { desdeCm, mm } from '../units/index.js'
-import { CHAPAS, calcular } from './index.js'
+import { calcular } from './index.js'
+
+const CHAPA = FORMATOS[0]! // 1000 × 2000
+const PROP = 0.5
+
+/** Pared de 3,50 × 2,00 m: cuatro paños iguales de 87,5 × 200 cm. */
+const despiece = despiezar(desdeCm(350), desdeCm(200), CHAPA, PROP)
 
 const base = {
-  ancho: desdeCm(240),
-  alto: desdeCm(110),
+  despiece,
   areaLibre: 0.336,
   material: 'acero' as const,
   espesor: mm(2),
-  chapa: CHAPAS['1000x2000']!,
 }
 
-describe('superficie', () => {
-  it('2,40 x 1,10 m da 2,64 m2', () => {
-    expect(calcular(base).superficie).toBeCloseTo(2.64, 9)
-  })
-})
-
-describe('chapas', () => {
-  it('es una grilla simple, no un anidado', () => {
-    // 2400 de ancho no entra en 1000: hacen falta 3 a lo ancho.
-    // 1100 de alto no entra en 2000: 1 a lo alto. Total 3.
-    expect(calcular(base).chapas).toBe(3)
+describe('superficie y paños', () => {
+  it('la superficie sale del despiece', () => {
+    expect(calcular(base).superficie).toBeCloseTo(7, 9)
   })
 
-  it('un paño que entra justo en una chapa da una chapa', () => {
-    expect(calcular({ ...base, ancho: desdeCm(100), alto: desdeCm(200) }).chapas).toBe(1)
+  it('los paños también', () => {
+    expect(calcular(base).panos).toBe(4)
   })
 
-  it('un paño diminuto igual consume una chapa entera', () => {
-    expect(calcular({ ...base, ancho: desdeCm(10), alto: desdeCm(10) }).chapas).toBe(1)
+  it('el material usado lleva decimales, y es lo que se dice en el taller', () => {
+    // 7 m2 sobre chapas de 2 m2 = 3,5 chapas de material, pero se compran 4.
+    expect(calcular(base).chapasDeMaterial).toBeCloseTo(3.5, 9)
+    expect(calcular(base).chapasACompar).toBe(4)
   })
 
-  it('con chapa más grande hacen falta menos', () => {
-    const a = calcular(base).chapas
-    const b = calcular({ ...base, chapa: CHAPAS['1220x2440']! }).chapas
-    expect(b).toBeLessThanOrEqual(a)
-  })
-})
-
-describe('recorte', () => {
-  it('es lo que sobra de la chapa comprada', () => {
-    // 3 chapas de 1000 x 2000 = 6 m2 compradas para un paño de 2,64 m2
-    expect(calcular(base).recorte).toBeCloseTo(1 - 2.64 / 6, 9)
-  })
-
-  it('un paño que entra justo no recorta nada', () => {
-    expect(calcular({ ...base, ancho: desdeCm(100), alto: desdeCm(200) }).recorte).toBeCloseTo(0, 9)
-  })
-
-  it('siempre cae entre 0 y 1', () => {
-    for (const cm of [10, 99, 100, 101, 240, 305]) {
-      const r = calcular({ ...base, ancho: desdeCm(cm) }).recorte
-      expect(r).toBeGreaterThanOrEqual(0)
-      expect(r).toBeLessThan(1)
-    }
+  it('el desperdicio es lo que sobra de lo comprado', () => {
+    expect(calcular(base).desperdicio).toBeCloseTo(1 / 8, 9)
   })
 })
 
 describe('los dos pesos', () => {
-  it('el paño terminado pesa menos que la chapa comprada', () => {
+  it('el conjunto terminado pesa menos que la chapa comprada', () => {
     const t = calcular(base)
     expect(t.pesoPano).toBeLessThan(t.pesoChapa)
   })
 
-  it('el paño: superficie por lo macizo por espesor por densidad', () => {
-    // 2,64 m2 x (1 - 0,336) x 0,002 m x 7850 kg/m3
-    expect(calcular(base).pesoPano).toBeCloseTo(2.64 * 0.664 * 0.002 * 7850, 6)
+  it('el conjunto: superficie por lo macizo por espesor por densidad', () => {
+    // 7 m2 x (1 - 0,336) x 0,002 m x 7850 kg/m3
+    expect(calcular(base).pesoPano).toBeCloseTo(7 * 0.664 * 0.002 * 7850, 6)
   })
 
   it('la chapa comprada no descuenta los agujeros', () => {
-    const t = calcular(base)
-    const sinAgujeros = calcular({ ...base, areaLibre: 0 })
-    expect(t.pesoChapa).toBeCloseTo(sinAgujeros.pesoChapa, 9)
+    // 4 chapas de 2 m2 = 8 m2 x 0,002 m x 7850
+    expect(calcular(base).pesoChapa).toBeCloseTo(8 * 0.002 * 7850, 6)
+    expect(calcular({ ...base, areaLibre: 0 }).pesoChapa).toBeCloseTo(calcular(base).pesoChapa, 9)
   })
 
   it('el inoxidable pesa más que el acero con todo lo demás igual', () => {
@@ -80,12 +58,26 @@ describe('los dos pesos', () => {
       .toBeGreaterThan(calcular(base).pesoPano)
   })
 
-  it('con más área libre el paño pesa menos', () => {
+  it('con más área libre el conjunto pesa menos', () => {
     expect(calcular({ ...base, areaLibre: 0.5 }).pesoPano)
       .toBeLessThan(calcular({ ...base, areaLibre: 0.1 }).pesoPano)
   })
 
   it('un paño todo agujero no pesa nada', () => {
     expect(calcular({ ...base, areaLibre: 1 }).pesoPano).toBeCloseTo(0, 12)
+  })
+})
+
+describe('la chapa grande cambia los números', () => {
+  it('con 1220 × 2440 hacen falta menos paños para la misma pared', () => {
+    const grande = despiezar(desdeCm(350), desdeCm(200), FORMATOS[1]!, PROP)
+    expect(calcular({ ...base, despiece: grande }).panos)
+      .toBeLessThan(calcular(base).panos)
+  })
+
+  it('pero la superficie cubierta es la misma', () => {
+    const grande = despiezar(desdeCm(350), desdeCm(200), FORMATOS[1]!, PROP)
+    expect(calcular({ ...base, despiece: grande }).superficie)
+      .toBeCloseTo(calcular(base).superficie, 9)
   })
 })

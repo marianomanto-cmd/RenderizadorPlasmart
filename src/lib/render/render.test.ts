@@ -6,7 +6,7 @@ import {
   areaLibreVisible,
   esMetal,
   marcoDesdeMm,
-  prepararTransforme,
+  prepararTransformeDespiece,
 } from '../pattern/ajuste.js'
 import { mascaraDesdeFuncion } from '../pattern/mascara.js'
 import { construirPiramide } from '../pattern/piramide.js'
@@ -36,7 +36,7 @@ const P_METAL = construirPiramide(TODO_METAL)
 const P_AIRE = construirPiramide(TODO_AIRE)
 
 function spec(over: Partial<EspecRender> = {}): EspecRender {
-  const transforme = prepararTransforme({ modo: 'estirar', escala: 1 }, 1, 0.5)
+  const transforme = prepararTransformeDespiece(1, 1)
   return {
     anchoFoto: 240,
     altoFoto: 180,
@@ -155,7 +155,7 @@ describe('el render y el presupuesto dicen lo mismo', () => {
   // separan, uno de los dos está mintiendo.
   it('la cobertura media coincide con el área de metal calculada', () => {
     for (const quad of [CASI_FRENTE, EN_ANGULO]) {
-      const t = prepararTransforme({ modo: 'estirar', escala: 1 }, 1, 0.5)
+      const t = prepararTransformeDespiece(1, 1)
       const areaMetal = 1 - areaLibreVisible(RAYAS, t, SIN_MARCO, 256)
       const e = spec({ quad, transforme: t, areaMetal })
       expect(coberturaMedia(e, debeSerOk(renderizarPano(e)))).toBeCloseTo(areaMetal, 1)

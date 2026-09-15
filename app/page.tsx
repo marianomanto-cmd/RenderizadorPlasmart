@@ -13,13 +13,20 @@ import type { Quad } from '../src/lib/geometry/types.js'
 import {
   areaLibreVisible,
   marcoDesdeMm,
-  prepararTransforme,
-  type TransformePatron,
+  prepararTransformeDespiece,
 } from '../src/lib/pattern/ajuste.js'
+import {
+  FORMATOS,
+  despiezar,
+  mejorFormato,
+  resumen,
+  resumenMaterial,
+  type FormatoChapa,
+} from '../src/lib/layout/index.js'
 import type { Piramide } from '../src/lib/pattern/piramide.js'
-import type { Linea, ModoAjuste } from '../src/lib/pattern/types.js'
+import type { Linea } from '../src/lib/pattern/types.js'
 import { COLOR_MATERIAL, renderizarPano } from '../src/lib/render/index.js'
-import { CHAPAS, calcular, type Takeoff } from '../src/lib/takeoff/index.js'
+import { calcular, type Takeoff } from '../src/lib/takeoff/index.js'
 import { NOMBRE_MATERIAL, desdeCm, mm, type Material } from '../src/lib/units/index.js'
 
 /** Arrancan como un rectángulo: las fotos salen casi de frente, así que casi
@@ -32,9 +39,6 @@ const NOMBRE_LINEA: Record<Linea, string> = {
   botanicos: 'Botánicos', geometricos: 'Geométricos',
   abstractos: 'Abstractos', ornamentales: 'Ornamentales',
 }
-const NOMBRE_MODO: Record<ModoAjuste, string> = {
-  recortar: 'Agrandar', mosaico: 'Repetir', estirar: 'Estirar',
-}
 const MARCO_MM = 30
 const ESPESOR_MM = 2
 
@@ -46,7 +50,7 @@ export default function Pagina() {
   const [catalogo, setCatalogo] = useState<ModeloCatalogo[]>([])
   const [modeloId, setModeloId] = useState('B.01')
   const [linea, setLinea] = useState<Linea>('botanicos')
-  const [modo, setModo] = useState<ModoAjuste>('recortar')
+  const [formatoElegido, setFormatoElegido] = useState<string>('auto')
   const [material, setMaterial] = useState<Material>('galvanizado')
   const [piramide, setPiramide] = useState<Piramide | null>(null)
   const [arrastrando, setArrastrando] = useState<number | null>(null)
@@ -72,28 +76,33 @@ export default function Pagina() {
     return () => { vivo = false }
   }, [modelo])
 
-  // ---- cómo se acomoda el dibujo, y cuánto agujero queda a la vista ----
+  // ---- el despiece: con cuántos paños de medida comercial se cubre ----
   const ajuste = useMemo(() => {
     if (!modelo || !piramide) return null
     const anchoMm = desdeCm(anchoCm || 1)
     const altoMm = desdeCm(altoCm || 1)
-    const propPano = anchoMm / altoMm
-    const propMascara = modelo.mascaraAncho / modelo.mascaraAlto
-    const marco = marcoDesdeMm(MARCO_MM, anchoMm, altoMm)
-    const transforme: TransformePatron = prepararTransforme(
-      { modo, escala: 0.5 }, propPano, propMascara, modelo.interior,
-    )
-    // Lo que se ve, no lo que dice el catálogo: al agrandar y recortar se ve
-    // solo un pedazo del dibujo, y ese pedazo puede tener más agujeros.
-    const libre = areaLibreVisible(piramide.niveles[0]!, transforme, marco, 220)
-    return { transforme, marco, libre, anchoMm, altoMm }
-  }, [modelo, piramide, modo, anchoCm, altoCm])
+    const propModelo = modelo.mascaraAncho / modelo.mascaraAlto
+
+    const chapa: FormatoChapa = formatoElegido === 'auto'
+      ? mejorFormato(anchoMm, altoMm, propModelo)
+      : FORMATOS.find((f) => f.nombre === formatoElegido) ?? FORMATOS[0]!
+
+    const despiece = despiezar(anchoMm, altoMm, chapa, propModelo)
+
+    // El tamaño del motivo lo fija la chapa, no la superficie: el dibujo se
+    // repite una vez por paño. Y el marco macizo es de CADA paño.
+    const transforme = prepararTransformeDespiece(despiece.columnas, despiece.filas)
+    const marco = marcoDesdeMm(MARCO_MM, despiece.panoAncho, despiece.panoAlto)
+    const libre = areaLibreVisible(piramide.niveles[0]!, transforme, marco, 200)
+
+    return { transforme, marco, libre, despiece, chapa }
+  }, [modelo, piramide, formatoElegido, anchoCm, altoCm])
 
   const numeros: Takeoff | null = useMemo(() => {
     if (!ajuste) return null
     return calcular({
-      ancho: ajuste.anchoMm, alto: ajuste.altoMm, areaLibre: ajuste.libre,
-      material, espesor: mm(ESPESOR_MM), chapa: CHAPAS['1000x2000']!,
+      despiece: ajuste.despiece, areaLibre: ajuste.libre,
+      material, espesor: mm(ESPESOR_MM),
     })
   }, [ajuste, material])
 
@@ -254,7 +263,7 @@ export default function Pagina() {
             <div><Stat size="30px" value={numero(numeros.superficie, 2)} unit="m²" label="Superficie" /></div>
             <div><Stat size="30px" value={porcentaje(numeros.areaLibre)} unit="%" label="Área libre" /></div>
             <div><Stat size="30px" value={numero(numeros.pesoPano, 1)} unit="kg" label="Peso del paño" /></div>
-            <div><Stat size="30px" value={String(numeros.chapas)} unit={`· ${porcentaje(numeros.recorte)}%`} label="Chapas · recorte" /></div>
+            <div><Stat size="30px" value={String(numeros.panos)} unit={`· ${porcentaje(numeros.desperdicio)}%`} label="Paños · desperdicio" /></div>
           </div>
         )}
 
@@ -305,12 +314,27 @@ export default function Pagina() {
         </div>
 
         <div className="bloque">
-          <span className="titulo">Cómo se acomoda el dibujo</span>
+          <span className="titulo">Despiece</span>
+          {ajuste && (
+            <p style={{ margin: '0 0 12px', fontSize: 'var(--fs-sm)', color: 'var(--text)', lineHeight: 1.5 }}>
+              {resumen(ajuste.despiece)}
+              <span style={{ color: 'var(--muted)' }}> · {resumenMaterial(ajuste.despiece)}</span>
+            </p>
+          )}
           <div className="segmentado">
-            {(['recortar', 'mosaico', 'estirar'] as const).map((k) => (
-              <button key={k} aria-pressed={modo === k} onClick={() => setModo(k)}>{NOMBRE_MODO[k]}</button>
+            <button aria-pressed={formatoElegido === 'auto'} onClick={() => setFormatoElegido('auto')}>
+              La que convenga
+            </button>
+            {FORMATOS.map((f) => (
+              <button key={f.nombre} aria-pressed={formatoElegido === f.nombre}
+                onClick={() => setFormatoElegido(f.nombre)}>{f.nombre}</button>
             ))}
           </div>
+          <p style={{ margin: '12px 0 0', fontSize: 'var(--fs-xs)', color: 'var(--muted)', lineHeight: 1.5 }}>
+            La superficie se reparte en paños iguales, cada uno cortado de una
+            chapa de medida comercial. El dibujo escala a la chapa, así que el
+            motivo tiene el tamaño que va a tener de verdad.
+          </p>
         </div>
 
         <div className="bloque">
@@ -340,7 +364,9 @@ export default function Pagina() {
           <p className="aviso" style={{ margin: 0 }}>
             Los números son orientativos y sirven para conversar. Si el trabajo se
             confirma, se hace una medición formal y un presupuesto detallado. Las
-            chapas salen de una grilla simple, no de un anidado de producción.
+            chapas salen de repartir la superficie en paños iguales, no de un
+            anidado de producción: un anidado puede sacar dos paños angostos de
+            la misma chapa y bajar el número.
           </p>
         </div>
       </div>

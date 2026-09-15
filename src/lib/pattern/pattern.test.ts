@@ -1,14 +1,13 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import {
-  DIBUJO_ENTERO,
   SIN_MARCO,
   areaLibreVisible,
-  enElMarco,
+  dentroDelPatron,
   esMetal,
-  hayMetalEnPano,
+
   marcoDesdeMm,
-  prepararTransforme,
+  prepararTransformeDespiece,
 } from './ajuste.js'
 import {
   areaLibre,
@@ -16,7 +15,7 @@ import {
   empaquetarMascara,
   mascaraDesdeFuncion,
 } from './mascara.js'
-import type { AjustePatron, Mascara } from './types.js'
+
 
 const RAIZ3 = Math.sqrt(3)
 
@@ -75,93 +74,6 @@ describe('área libre contra la fórmula cerrada', () => {
   })
 })
 
-describe('los tres modos de ajuste', () => {
-  const PROP_MASCARA = 0.5 // el dibujo del catálogo es vertical, 1:2
-
-  const modos = (escala = 1): readonly AjustePatron[] => [
-    { modo: 'estirar', escala },
-    { modo: 'mosaico', escala },
-    { modo: 'recortar', escala },
-  ]
-
-  it('cuando el paño tiene la misma forma que el dibujo, los tres coinciden', () => {
-    // Es la mejor prueba de que la formulación está bien planteada: si el paño
-    // ya tiene la proporción del dibujo, no hay nada que decidir, y los tres
-    // modos tienen que dar exactamente la misma transformación.
-    const ts = modos().map((a) => prepararTransforme(a, PROP_MASCARA, PROP_MASCARA))
-    const [primero] = ts
-    for (const t of ts) {
-      expect(t.escalaU).toBeCloseTo(primero!.escalaU, 12)
-      expect(t.desplazU).toBeCloseTo(primero!.desplazU, 12)
-      expect(t.escalaV).toBeCloseTo(primero!.escalaV, 12)
-      expect(t.desplazV).toBeCloseTo(primero!.desplazV, 12)
-    }
-    expect(primero!.escalaU).toBeCloseTo(1, 12)
-    expect(primero!.desplazU).toBeCloseTo(0, 12)
-  })
-
-  it('recortar y mosaico NO deforman el dibujo, estirar sí', () => {
-    // Una distancia del dibujo se estira igual a lo ancho que a lo alto si y
-    // solo si  escalaU · propMascara / propPano === escalaV.
-    const noDeforma = (a: AjustePatron, P: number): boolean => {
-      const t = prepararTransforme(a, P, PROP_MASCARA)
-      return Math.abs((t.escalaU * PROP_MASCARA) / P - t.escalaV) < 1e-12
-    }
-    for (const P of [0.25, 0.5, 1, 2, 4]) {
-      expect(noDeforma({ modo: 'recortar', escala: 1 }, P)).toBe(true)
-      expect(noDeforma({ modo: 'mosaico', escala: 1 }, P)).toBe(true)
-      expect(noDeforma({ modo: 'mosaico', escala: 0.3 }, P)).toBe(true)
-      // estirar solo no deforma cuando las formas ya coinciden
-      expect(noDeforma({ modo: 'estirar', escala: 1 }, P)).toBe(P === PROP_MASCARA)
-    }
-  })
-
-  it('recortar siempre tapa el paño entero', () => {
-    for (const P of [0.25, 0.5, 1, 2, 4, 8]) {
-      const t = prepararTransforme({ modo: 'recortar', escala: 1 }, P, PROP_MASCARA)
-      for (const u of [0, 0.5, 1]) {
-        for (const v of [0, 0.5, 1]) {
-          const mu = t.escalaU * u + t.desplazU
-          const mv = t.escalaV * v + t.desplazV
-          expect(mu).toBeGreaterThanOrEqual(-1e-9)
-          expect(mu).toBeLessThanOrEqual(1 + 1e-9)
-          expect(mv).toBeGreaterThanOrEqual(-1e-9)
-          expect(mv).toBeLessThanOrEqual(1 + 1e-9)
-        }
-      }
-    }
-  })
-
-  it('mosaico repite la cantidad de veces que dice la escala', () => {
-    const rayas: Mascara = mascaraDesdeFuncion(256, 512, (_x, y) => y < 0.5)
-    // escala 0.5 = dos repeticiones a lo alto, así que v y v+0.5 caen en el
-    // mismo lugar del dibujo.
-    const t = prepararTransforme({ modo: 'mosaico', escala: 0.5 }, 1, 0.5)
-    for (const v of [0.05, 0.17, 0.33, 0.49]) {
-      expect(hayMetalEnPano(rayas, t, 0.5, v)).toBe(hayMetalEnPano(rayas, t, 0.5, v + 0.5))
-    }
-  })
-})
-
-describe('área libre de lo que realmente se ve', () => {
-  // Un dibujo con más agujeros arriba que abajo. Al recortar un paño ancho, se
-  // ve solo la franja del medio, así que el número que va en pantalla no es el
-  // del catálogo.
-  const desparejo = mascaraDesdeFuncion(512, 1024, (_x, y) => y > 0.35)
-
-  it('con estirar se ve el dibujo entero, así que coincide con el catálogo', () => {
-    const t = prepararTransforme({ modo: 'estirar', escala: 1 }, 3, 0.5)
-    expect(areaLibreVisible(desparejo, t, SIN_MARCO, 256)).toBeCloseTo(areaLibre(desparejo), 2)
-  })
-
-  it('con recortar en un paño ancho se ve otra cosa, y hay que decirlo', () => {
-    const delCatalogo = areaLibre(desparejo)
-    const t = prepararTransforme({ modo: 'recortar', escala: 1 }, 6, 0.5)
-    const visible = areaLibreVisible(desparejo, t, SIN_MARCO, 256)
-    expect(Math.abs(visible - delCatalogo)).toBeGreaterThan(0.05)
-  })
-})
-
 interface Fila {
     id: string
     linea: string
@@ -174,6 +86,129 @@ interface Fila {
   mascara: string
 }
 const indiceGlobal: Fila[] = JSON.parse(readFileSync('public/modelos/indice.json', 'utf8'))
+
+describe('el despiece manda sobre el dibujo', () => {
+  // El tamaño del motivo no es una decisión de diseño: lo fija la chapa. Una
+  // superficie se cubre con N paños y cada uno lleva el dibujo entero.
+
+  it('se repite tantas veces como paños haya', () => {
+    const t = prepararTransformeDespiece(4, 1)
+    expect(t.escalaU).toBe(4)
+    expect(t.escalaV).toBe(1)
+    expect(t.repetir).toBe(true)
+  })
+
+  it('usa el dibujo entero, con su marco: esa línea es la junta', () => {
+    const t = prepararTransformeDespiece(3, 2)
+    expect(t.mu0).toBe(0)
+    expect(t.muRango).toBe(1)
+    expect(t.mv0).toBe(0)
+    expect(t.mvRango).toBe(1)
+  })
+
+  it('cada paño arranca el dibujo desde cero: nunca queda medio motivo cortado', () => {
+    // Como la cantidad de paños es entera, el borde de cada paño cae justo en
+    // el borde del dibujo. Es lo que da el reparto equitativo.
+    const t = prepararTransformeDespiece(4, 1)
+    for (const columna of [0, 1, 2, 3]) {
+      const inicio = dentroDelPatron(t, columna / 4 + 1e-9, 0.5)
+      expect(inicio.mu).toBeCloseTo(0, 6)
+    }
+  })
+
+  it('un solo paño es el dibujo sin repetir', () => {
+    const t = prepararTransformeDespiece(1, 1)
+    const a = dentroDelPatron(t, 0.25, 0.75)
+    expect(a.mu).toBeCloseTo(0.25, 12)
+    expect(a.mv).toBeCloseTo(0.75, 12)
+  })
+
+  it('el centro de cada paño cae en el centro del dibujo', () => {
+    const t = prepararTransformeDespiece(3, 2)
+    for (const c of [0, 1, 2]) {
+      for (const f of [0, 1]) {
+        const p = dentroDelPatron(t, (c + 0.5) / 3, (f + 0.5) / 2)
+        expect(p.mu).toBeCloseTo(0.5, 9)
+        expect(p.mv).toBeCloseTo(0.5, 9)
+      }
+    }
+  })
+})
+
+describe('el marco macizo es de CADA paño, no del conjunto', () => {
+  // Es el error que hay que no cometer: si el marco se midiera contra la
+  // superficie entera, los paños del medio saldrían sin borde y el conjunto se
+  // vería como una sola pieza gigante en vez de como las chapas que es.
+  const todoAire = mascaraDesdeFuncion(64, 128, () => false)
+  const t = prepararTransformeDespiece(4, 1)
+  const marco = marcoDesdeMm(30, 875, 2000) // contra el PAÑO, no la superficie
+
+  it('30 mm sobre un paño de 87,5 cm dan la fracción del paño', () => {
+    expect(marco.u).toBeCloseTo(30 / 875, 12)
+    expect(marco.v).toBeCloseTo(30 / 2000, 12)
+  })
+
+  it('hay borde macizo en los cuatro paños, no solo en las puntas', () => {
+    for (const columna of [0, 1, 2, 3]) {
+      const justoDespuesDelBorde = columna / 4 + 0.0005
+      expect(esMetal(todoAire, t, marco, justoDespuesDelBorde, 0.5), `paño ${columna}`).toBe(true)
+    }
+  })
+
+  it('y en el medio de cada paño no hay nada, porque el dibujo es todo aire', () => {
+    for (const columna of [0, 1, 2, 3]) {
+      expect(esMetal(todoAire, t, marco, (columna + 0.5) / 4, 0.5)).toBe(false)
+    }
+  })
+
+  it('sin marco, un dibujo todo aire no pinta nada en ningún lado', () => {
+    for (const u of [0.001, 0.25, 0.5, 0.999]) {
+      expect(esMetal(todoAire, t, SIN_MARCO, u, 0.5)).toBe(false)
+    }
+  })
+})
+
+describe('área libre de lo que realmente se ve', () => {
+  it('con un paño y sin marco coincide con la del dibujo', () => {
+    const m = mascaraDesdeFuncion(256, 512, (x) => Math.floor(x * 8) % 2 === 0)
+    const t = prepararTransformeDespiece(1, 1)
+    expect(areaLibreVisible(m, t, SIN_MARCO, 256)).toBeCloseTo(areaLibre(m), 2)
+  })
+
+  it('repetir el dibujo no cambia cuánto agujero hay', () => {
+    // Cubrir la misma pared con 1 paño o con 4 no cambia la proporción de
+    // agujero, solo el tamaño del motivo.
+    const m = mascaraDesdeFuncion(256, 512, (x) => Math.floor(x * 8) % 2 === 0)
+    const uno = areaLibreVisible(m, prepararTransformeDespiece(1, 1), SIN_MARCO, 256)
+    const cuatro = areaLibreVisible(m, prepararTransformeDespiece(4, 1), SIN_MARCO, 256)
+    expect(cuatro).toBeCloseTo(uno, 2)
+  })
+
+  it('más paños dejan MENOS agujero, porque hay más bordes macizos', () => {
+    // El marco hay que calcularlo contra el paño de CADA despiece, no una vez y
+    // reusarlo: son 30 mm fijos, así que sobre un paño angosto pesan mucho más.
+    // Misma pared de 3,50 m, un paño contra seis.
+    const m = mascaraDesdeFuncion(256, 512, () => false)
+    const uno = areaLibreVisible(
+      m, prepararTransformeDespiece(1, 1), marcoDesdeMm(30, 3500, 2000), 256,
+    )
+    const seis = areaLibreVisible(
+      m, prepararTransformeDespiece(6, 1), marcoDesdeMm(30, 3500 / 6, 2000), 256,
+    )
+    // Con el dibujo todo aire, el agujero que queda es exactamente lo de
+    // adentro del marco, y se puede calcular a mano:
+    const esperado = (anchoPano: number) =>
+      (1 - (2 * 30) / anchoPano) * (1 - (2 * 30) / 2000)
+    // Tolerancia relativa del 2%: con seis paños el marco mide apenas un par de
+    // muestras de ancho, así que el conteo redondea. Es error de medición del
+    // test, no del cálculo.
+    const cerca = (medido: number, exacto: number) =>
+      Math.abs(medido - exacto) / exacto < 0.02
+    expect(cerca(uno, esperado(3500)), `uno=${uno}`).toBe(true)        // ~0,953
+    expect(cerca(seis, esperado(3500 / 6)), `seis=${seis}`).toBe(true) // ~0,870
+    expect(seis).toBeLessThan(uno)
+  })
+})
 
 describe('el catálogo extraído del PDF', () => {
   const indice = indiceGlobal
@@ -241,78 +276,4 @@ describe('empaquetado de máscaras', () => {
   })
 })
 
-describe('el marco macizo del paño', () => {
-  it('30 mm en un paño de 2400 x 1100 da la fracción de cada lado', () => {
-    const m = marcoDesdeMm(30, 2400, 1100)
-    expect(m.u).toBeCloseTo(30 / 2400, 12)
-    expect(m.v).toBeCloseTo(30 / 1100, 12)
-  })
 
-  it('los bordes son metal y el centro no', () => {
-    const m = marcoDesdeMm(30, 2400, 1100)
-    expect(enElMarco(m, 0.001, 0.5)).toBe(true)
-    expect(enElMarco(m, 0.999, 0.5)).toBe(true)
-    expect(enElMarco(m, 0.5, 0.001)).toBe(true)
-    expect(enElMarco(m, 0.5, 0.999)).toBe(true)
-    expect(enElMarco(m, 0.5, 0.5)).toBe(false)
-  })
-
-  it('el marco tapa el dibujo: donde hay marco siempre hay metal', () => {
-    const todoAire = mascaraDesdeFuncion(64, 128, () => false)
-    const t = prepararTransforme({ modo: 'estirar', escala: 1 }, 2, 0.5)
-    const marco = marcoDesdeMm(30, 2400, 1100)
-    expect(esMetal(todoAire, t, marco, 0.5, 0.5)).toBe(false)
-    expect(esMetal(todoAire, t, marco, 0.002, 0.5)).toBe(true)
-  })
-})
-
-describe('repetir sin arrastrar el marco del modelo', () => {
-  // El bug que esto arregla se ve: repetir el dibujo tal cual repite su marco
-  // macizo y aparece una grilla de líneas negras a lo largo de todo el paño.
-  const interior = { x0: 0.05, x1: 0.95, y0: 0.025, y1: 0.975 }
-
-  it('al repetir se usa solo el interior del dibujo', () => {
-    const t = prepararTransforme({ modo: 'mosaico', escala: 0.5 }, 3, 0.5, interior)
-    expect(t.mu0).toBeCloseTo(0.05, 12)
-    expect(t.muRango).toBeCloseTo(0.9, 12)
-    expect(t.mv0).toBeCloseTo(0.025, 12)
-    expect(t.mvRango).toBeCloseTo(0.95, 12)
-  })
-
-  it('un dibujo que es todo marco y nada más nunca se muestrea adentro del marco', () => {
-    // El modelo es marco macizo por fuera y aire por dentro. Al repetirlo solo
-    // por el interior, no tiene que aparecer nunca metal.
-    const soloMarco = mascaraDesdeFuncion(400, 800, (x, y) =>
-      x < 0.05 || x > 0.95 || y < 0.025 || y > 0.975,
-    )
-    const t = prepararTransforme({ modo: 'mosaico', escala: 0.4 }, 3, 0.5, interior)
-    let metal = 0
-    for (let i = 0; i < 40; i++) {
-      for (let j = 0; j < 40; j++) {
-        if (hayMetalEnPano(soloMarco, t, (i + 0.5) / 40, (j + 0.5) / 40)) metal++
-      }
-    }
-    expect(metal).toBe(0)
-  })
-
-  it('los otros dos modos siguen usando el dibujo entero, marco incluido', () => {
-    for (const modo of ['estirar', 'recortar'] as const) {
-      const t = prepararTransforme({ modo, escala: 1 }, 3, 0.5, interior)
-      expect(t.mu0).toBe(DIBUJO_ENTERO.x0)
-      expect(t.muRango).toBe(1)
-      expect(t.mv0).toBe(DIBUJO_ENTERO.y0)
-      expect(t.mvRango).toBe(1)
-    }
-  })
-
-  it('al repetir, el motivo tampoco se deforma', () => {
-    const muRango = interior.x1 - interior.x0
-    const mvRango = interior.y1 - interior.y0
-    const propInterior = 0.5 * (muRango / mvRango)
-    for (const P of [0.5, 1, 3, 6]) {
-      const t = prepararTransforme({ modo: 'mosaico', escala: 0.4 }, P, 0.5, interior)
-      // misma condición que antes, pero con la proporción del interior
-      expect(Math.abs((t.escalaU * propInterior) / P - t.escalaV)).toBeLessThan(1e-12)
-    }
-  })
-})

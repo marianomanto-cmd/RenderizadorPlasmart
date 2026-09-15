@@ -25,28 +25,6 @@ export interface Mascara {
   readonly datos: Uint8Array
 }
 
-/**
- * Cómo se acomoda el dibujo del catálogo a un paño de otra proporción.
- *
- * El modelo viene dibujado vertical, más o menos 1:2. Un paño real puede ser
- * una baranda larga y horizontal. Alguien tiene que decidir qué se hace, y las
- * tres opciones se ven distinto:
- *
- * - `estirar`: el dibujo llena el paño. Las hojas quedan deformadas.
- * - `mosaico`: el dibujo mantiene su forma y se repite. Se ven las costuras.
- * - `recortar`: el dibujo mantiene su forma y se agranda hasta tapar el paño.
- *   No deforma y no hay costuras, pero se pierde parte de la composición.
- */
-export type ModoAjuste = 'estirar' | 'mosaico' | 'recortar'
-
-export const MODOS_AJUSTE: readonly ModoAjuste[] = ['estirar', 'mosaico', 'recortar']
-
-export const NOMBRE_MODO: Record<ModoAjuste, string> = {
-  estirar: 'Estirar',
-  mosaico: 'Repetir',
-  recortar: 'Agrandar y recortar',
-}
-
 /** Una línea del catálogo. */
 export type Linea = 'botanicos' | 'ornamentales' | 'geometricos' | 'abstractos'
 
@@ -67,19 +45,3 @@ export interface Modelo {
   /** Medido una vez sobre el dibujo completo, no estimado con una fórmula. */
   readonly areaLibre: number
 }
-
-/**
- * Cómo se aplica un modelo a un paño concreto. Es lo que se guarda congelado
- * junto al paño: si mañana cambia el catálogo, el paño guardado tiene que
- * volver a dibujarse igual que el día que el cliente lo vio.
- */
-export interface AjustePatron {
-  readonly modo: ModoAjuste
-  /**
-   * Solo para `mosaico`: qué fracción del alto del paño ocupa una repetición.
-   * 1 es una repetición de alto; 0,5 son dos.
-   */
-  readonly escala: number
-}
-
-export const AJUSTE_POR_DEFECTO: AjustePatron = { modo: 'recortar', escala: 1 }

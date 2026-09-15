@@ -93,35 +93,66 @@ ni abertura: tiene hojas.
 - El área libre deja de calcularse por celda y pasa a medirse una vez por
   modelo y guardarse en el catálogo. Sale más barato y más exacto.
 
-### Resuelto: los tres modos están implementados y se pueden ver
+### Corregido: el tamaño del motivo lo fija la chapa, no la superficie
 
-Se implementaron los tres y se compararon corriendo el código real, no una
-maqueta. Resultado:
+**Este fue el error más grande del proyecto y estuvo dos incrementos adentro.**
 
-| Modo | Veredicto |
-|------|-----------|
-| `estirar` | **Nunca sirve.** Deforma: las hojas quedan aplastadas y los cuadrados de G.13 se vuelven rectángulos. Queda implementado pero no es el que va por defecto |
-| `mosaico` | **El mejor para los orgánicos.** B.01 fluye continuo a lo largo de todo el paño. Requirió un arreglo, abajo |
-| `recortar` | **Siempre funciona.** Nunca deforma ni deja costuras, pero en un paño 3:1 el motivo queda gigante. Bueno cuando se busca justamente eso |
+Yo trataba el dibujo como elástico: agarraba un modelo y lo estiraba, repetía o
+recortaba hasta tapar la superficie, y el tamaño del motivo era una decisión de
+diseño con tres opciones. El resultado sobre una pared de tres metros y medio
+eran hojas de ochenta centímetros de largo. Eso no sale de ninguna chapa y no
+significa nada comercialmente.
 
-En los geométricos rígidos, `mosaico` deja costuras verticales tenues. No es un
-bug: esos dibujos no son periódicos, el motivo está centrado en su paño. Los
-orgánicos repiten limpio.
+**Lo real:** una superficie se cubre con paños de medida comercial. Cada paño se
+corta de una chapa y lleva el dibujo completo escalado a esa chapa. Si la pared
+mide cuatro metros se ven cuatro paños, cada uno del tamaño que va a tener de
+verdad, con sus juntas a la vista.
 
-**Recomendación:** `mosaico` por defecto, con control de escala para que el
-vendedor elija el tamaño del motivo, y `recortar` a un toque para el efecto
-grande. `estirar` no debería ser nunca el valor por defecto.
+El catálogo lo venía diciendo y no lo vi: **53 de los 63 modelos están dibujados
+exactamente a 1:2**, que es la proporción de 1000 × 2000 y de 1220 × 2440. Cada
+modelo *es* una chapa. Las fotos de obra de Instagram lo confirman: los paños se
+cuentan a simple vista, cada uno con su marco.
 
-### Hallazgo: cada modelo trae su propio marco, y repetirlo rompe el mosaico
+**Y una consecuencia incómoda:** cuando el modo mosaico me mostró una grilla de
+líneas negras, la llamé bug y la saqué. Esas líneas eran las juntas entre
+chapas. Arreglé algo que no estaba roto y encima borré la información correcta.
 
-54 de los 63 modelos vienen con un marco macizo dibujado, de un 5,5% del ancho
-en la mediana. Repetir el dibujo tal cual repite ese marco, y el paño aparece
-cruzado por una grilla de líneas negras: parece una pared de azulejos.
+### El reparto es equitativo
 
-La solución es la que aplicaría a mano el que prepara el archivo de corte:
-**repetir solo el interior del dibujo y poner un único marco alrededor de todo
-el paño**, de los 30 mm que se decidieron. El grosor del marco de cada modelo se
-mide una vez al construir el catálogo y queda guardado en el índice.
+Tres metros y medio con chapas de 1000 **no** son 1000 + 1000 + 1000 + 500: son
+cuatro paños de 875. Primero se calcula cuántos paños hacen falta como mínimo y
+después la superficie se divide en esa cantidad de partes iguales. Poner chapas
+enteras desde un borde y dejar un recorte flaco del otro se ve pésimo en una
+fachada y no es lo que se hace.
+
+De yapa, el render sale mejor: como la cantidad de paños es entera, el dibujo se
+repite un número exacto de veces y nunca queda medio motivo cortado.
+
+### "Una chapa y media"
+
+Son dos números distintos y los dos van en pantalla:
+
+- **Material usado**, con decimales. Una superficie de 1,50 × 2,00 m son 3 m²,
+  o sea 1,5 chapas de 1000 × 2000. Es lo que se dice en el taller.
+- **Chapas a comprar**, entero. Esos 3 m² salen en dos paños de 750, o sea dos
+  chapas. No se puede comprar media.
+
+La diferencia es el desperdicio. Un anidado de producción puede sacar dos paños
+angostos de la misma chapa y bajar el número; esto no lo hace y lo dice.
+
+### El marco macizo es de cada paño
+
+Los 30 mm sin perforar son de **cada chapa**, no del conjunto. Medirlo contra la
+superficie entera dejaría los paños del medio sin borde y el conjunto se vería
+como una sola pieza gigante en vez de como las chapas que es. Hay un test que lo
+comprueba paño por paño.
+
+### Lo que todavía no hace
+
+En algunas obras de Plasmart el dibujo **no** se repite por paño: forma una
+composición continua a lo largo de todo el cerco, que alguien compuso a mano.
+Repetir por paño es el caso común y es lo honesto para una herramienta de venta,
+pero está anotado.
 
 ### Pregunta que sigue abierta
 
