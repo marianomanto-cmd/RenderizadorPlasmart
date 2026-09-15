@@ -93,7 +93,37 @@ ni abertura: tiene hojas.
 - El área libre deja de calcularse por celda y pasa a medirse una vez por
   modelo y guardarse en el catálogo. Sale más barato y más exacto.
 
-### Pregunta abierta y bloqueante para `lib/pattern`
+### Resuelto: los tres modos están implementados y se pueden ver
+
+Se implementaron los tres y se compararon corriendo el código real, no una
+maqueta. Resultado:
+
+| Modo | Veredicto |
+|------|-----------|
+| `estirar` | **Nunca sirve.** Deforma: las hojas quedan aplastadas y los cuadrados de G.13 se vuelven rectángulos. Queda implementado pero no es el que va por defecto |
+| `mosaico` | **El mejor para los orgánicos.** B.01 fluye continuo a lo largo de todo el paño. Requirió un arreglo, abajo |
+| `recortar` | **Siempre funciona.** Nunca deforma ni deja costuras, pero en un paño 3:1 el motivo queda gigante. Bueno cuando se busca justamente eso |
+
+En los geométricos rígidos, `mosaico` deja costuras verticales tenues. No es un
+bug: esos dibujos no son periódicos, el motivo está centrado en su paño. Los
+orgánicos repiten limpio.
+
+**Recomendación:** `mosaico` por defecto, con control de escala para que el
+vendedor elija el tamaño del motivo, y `recortar` a un toque para el efecto
+grande. `estirar` no debería ser nunca el valor por defecto.
+
+### Hallazgo: cada modelo trae su propio marco, y repetirlo rompe el mosaico
+
+54 de los 63 modelos vienen con un marco macizo dibujado, de un 5,5% del ancho
+en la mediana. Repetir el dibujo tal cual repite ese marco, y el paño aparece
+cruzado por una grilla de líneas negras: parece una pared de azulejos.
+
+La solución es la que aplicaría a mano el que prepara el archivo de corte:
+**repetir solo el interior del dibujo y poner un único marco alrededor de todo
+el paño**, de los 30 mm que se decidieron. El grosor del marco de cada modelo se
+mide una vez al construir el catálogo y queda guardado en el índice.
+
+### Pregunta que sigue abierta
 
 Cuando un cliente pide un B.01 de 2,40 × 1,10 m, **¿qué pasa con el dibujo?**
 En el catálogo el B.01 se muestra vertical y en la foto de aplicación es una
@@ -213,7 +243,7 @@ comprueba.
 - [x] **0 · Andamio** — TypeScript estricto, vitest, fast-check
 - [x] **1 · `lib/units` + `lib/geometry`** — 42 tests en verde
 - [ ] **0b · Prueba de Google en iPhone** — media jornada, antes de construir encima
-- [ ] **2 · `lib/pattern`** — bloqueado por la pregunta del dibujo
+- [x] **2 · `lib/pattern`** — 63 modelos extraídos del PDF, tres modos, 67 tests
 - [ ] **3 · `lib/takeoff`** — falta el prototipo HTML para comprobar paridad
 - [ ] **4 · `lib/render`** + `medirFidelidad`
 - [ ] **5 · Pantalla, sin backend**
@@ -222,9 +252,27 @@ comprueba.
 - [ ] **8 · Sincronización y archivos**
 - [ ] **9 · Endurecimiento en dispositivo real**
 
+### El catálogo salió del propio PDF
+
+No hizo falta esperar los DXF. Adentro del PDF cada paño está dibujado como una
+trayectoria de recorte de entre 168 y 89.407 segmentos: esa trayectoria **es** el
+contorno del corte. Se extraen los 63 modelos a SVG con
+`tools/extraer-catalogo.py` y se rasterizan a máscaras con
+`tools/rasterizar-modelos.py`.
+
+El área libre de cada modelo se mide una vez ahí, sobre el dibujo completo y con
+precisión de sub-píxel, y queda guardada en el índice. Va de **8,6% (A.15) a
+49,6% (A.35)**, con 29,3% de promedio.
+
+Las máscaras viajan en binario crudo de un bit por píxel, no como PNG, para que
+cargar el catálogo no dependa de un decodificador de imágenes. Son 1,4 MB
+comprimidos los 63 modelos, así que entra cómodo para andar sin señal.
+
+Si algún día hace falta la geometría exacta de producción, se reemplazan los SVG
+por los DXF y no cambia nada más: `lib/pattern` ya trabaja contra máscaras.
+
 ### Pendiente de recibir
 
 - **El prototipo HTML.** Bloquea el incremento 3.
-- **Los vectores del catálogo** (DXF o SVG). Bloquea el incremento 2.
 - **Si hacen aluminio o no.**
-- **Cómo se adapta el dibujo al tamaño del paño** (las tres opciones de arriba).
+- **Qué modo de ajuste va por defecto** (hay recomendación arriba).
