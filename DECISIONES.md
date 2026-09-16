@@ -303,6 +303,39 @@ comprueba.
 
 ---
 
+## El flujo son tres pasos, y en ese orden
+
+1. **Foto.** Sacada o elegida de la galería, las dos. El selector de archivo NO
+   lleva `capture`, justamente para que el teléfono ofrezca las dos y no fuerce
+   la cámara.
+2. **Escala.** Se marca una línea sobre algo de medida conocida y se dice cuánto
+   mide. De ahí sale cuántos píxeles de la foto son un metro.
+3. **Trabajo.** Recién ahí se marcan los paños.
+
+La escala no puede ir después: es lo que hace que **las medidas de cada paño
+salgan solas** del cuadrilátero en vez de tipearlas. Mover una esquina actualiza
+el ancho y el alto, y con eso el despiece entero.
+
+Los campos de medida siguen siendo editables. Una corrección a mano vale hasta
+que se vuelva a mover una esquina, que es cuando deja de ser válida.
+
+### Lo que la escala global supone, dicho en voz alta
+
+En una foto con perspectiva **un metro no son siempre los mismos píxeles**: uno
+cerca de la cámara ocupa muchos más que uno contra el fondo. Una escala global
+es correcta *a la distancia donde se trazó la línea* y se desvía con la
+profundidad.
+
+Por eso la instrucción en pantalla no es un adorno: la línea va sobre la misma
+pared donde van los paños. Cumpliendo eso el error es chico, y las tres fotos de
+referencia están casi de frente, que es el caso donde mejor funciona.
+
+Se evaluó una alternativa perspectivamente exacta —llevar la línea a
+coordenadas del paño con su homografía, donde la perspectiva se cancela sola—
+pero **no se puede**: la escala se define antes de que exista ningún paño, que
+es el orden que pide el negocio. Queda anotada por si algún día se quiere
+refinar la medida de un paño ya marcado.
+
 ## Rendimiento del render, medido
 
 Paño de 714 x 420 px sobre una foto de 1200 x 800, modelo B.01, en este

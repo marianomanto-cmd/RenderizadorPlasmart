@@ -112,6 +112,68 @@ html, body {
 .vacio h1 em { font-style: normal; color: var(--accent); }
 .vacio p { color: var(--muted); font-size: var(--fs-sm); margin: 0; line-height: 1.5; }
 
+/* ---- paso 2: la referencia de escala ---- */
+.capa-escala {
+  position: absolute;
+  inset: 0;
+  cursor: crosshair;
+  touch-action: none;
+  z-index: 8;
+}
+.capa-escala svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.regla-linea {
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 6px var(--accent-soft));
+  vector-effect: non-scaling-stroke;
+}
+.regla-tope {
+  stroke: var(--white);
+  stroke-width: 2;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+.regla-punta { fill: var(--accent); stroke: var(--white); stroke-width: 2; }
+
+.pista {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  max-width: min(92%, 420px);
+  padding: 10px 16px;
+  background: rgba(8, 9, 11, .82);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-sm);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--text);
+  text-align: center;
+  line-height: 1.5;
+  z-index: 9;
+  pointer-events: none;
+}
+
+.medida {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.medida .campo { flex: 0 1 150px; }
+
+.escala-actual {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 /* ---- panel de control ---- */
 .panel {
   flex: 0 0 auto;

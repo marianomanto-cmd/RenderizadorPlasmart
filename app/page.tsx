@@ -8,8 +8,14 @@ import { Tag } from './ds/Tag.js'
 import { LINEAS, cargarIndice, cargarPiramide, type ModeloCatalogo } from '../src/app-lib/catalogo.js'
 import { normalizarFoto, type FotoNormalizada } from '../src/app-lib/foto.js'
 import { numero, porcentaje } from '../src/app-lib/formato.js'
+import {
+  medirQuad,
+  mensajeDeErrorEscala,
+  pixelesPorMetro,
+  type Referencia,
+} from '../src/lib/escala/index.js'
 import { mensajeDeError, validarQuad } from '../src/lib/geometry/index.js'
-import type { Quad } from '../src/lib/geometry/types.js'
+import type { Point, Quad } from '../src/lib/geometry/types.js'
 import {
   FORMATOS,
   despiezar,
@@ -30,7 +36,7 @@ import type { Piramide } from '../src/lib/pattern/piramide.js'
 import type { Linea } from '../src/lib/pattern/types.js'
 import { COLOR_MATERIAL, renderizarPano } from '../src/lib/render/index.js'
 import { calcular } from '../src/lib/takeoff/index.js'
-import { NOMBRE_MATERIAL, desdeCm, mm, type Material } from '../src/lib/units/index.js'
+import { NOMBRE_MATERIAL, aCm, desdeCm, mm, type Material } from '../src/lib/units/index.js'
 
 const NOMBRE_LINEA: Record<Linea, string> = {
   botanicos: 'Botánicos', geometricos: 'Geométricos',
@@ -86,8 +92,20 @@ interface Calculado {
   readonly piramide: Piramide
 }
 
+/**
+ * El trabajo va en tres pasos y en este orden: primero entra la foto, después
+ * se le da la escala, y recién ahí se marcan los paños. La escala no puede ir
+ * después: es lo que permite que las medidas de cada paño salgan solas del
+ * cuadrilátero en vez de tipearlas.
+ */
+type Paso = 'foto' | 'escala' | 'trabajo'
+
 export default function Pagina() {
+  const [paso, setPaso] = useState<Paso>('foto')
   const [foto, setFoto] = useState<FotoNormalizada | null>(null)
+  const [referencia, setReferencia] = useState<Referencia | null>(null)
+  const [metrosTexto, setMetrosTexto] = useState('1')
+  const [trazando, setTrazando] = useState(false)
   const [panos, setPanos] = useState<PanoEnFoto[]>([nuevoPano(1)])
   const [activo, setActivo] = useState(0)
   const [catalogo, setCatalogo] = useState<ModeloCatalogo[]>([])
@@ -102,6 +120,20 @@ export default function Pagina() {
   const pedidoRef = useRef<number | null>(null)
   const archivoRef = useRef<HTMLInputElement>(null)
   const piramidesRef = useRef(new Map<string, Piramide>())
+
+  /** Píxeles de la foto por metro real. Es la base de todas las medidas. */
+  const escala = useMemo(() => {
+    if (!foto || !referencia) return null
+    const r = pixelesPorMetro(referencia, foto.ancho, foto.alto)
+    return r.ok ? r.value : null
+  }, [foto, referencia])
+
+  /** Medidas que salen del cuadrilátero, en centímetros enteros. */
+  const medirDesdeEsquinas = useCallback((esquinas: Quad) => {
+    if (!foto || escala === null) return null
+    const m = medirQuad(esquinas, escala, foto.ancho, foto.alto)
+    return { anchoCm: Math.max(1, Math.round(aCm(m.ancho))), altoCm: Math.max(1, Math.round(aCm(m.alto))) }
+  }, [foto, escala])
 
   const pano = panos[activo] ?? panos[0]!
   const modelo = useMemo(
@@ -195,6 +227,7 @@ export default function Pagina() {
     }
     ctx.clearRect(0, 0, cv.width, cv.height)
     ctx.drawImage(foto.bitmap, 0, 0, cv.width, cv.height)
+    if (paso !== 'trabajo') return // midiendo la escala se ve la foto pelada
 
     const capa = (capaRef.current ??= document.createElement('canvas'))
     const cctx = capa.getContext('2d')
@@ -222,7 +255,7 @@ export default function Pagina() {
       const k = 1 / escalaRender
       ctx.drawImage(capa, r.value.x * k, r.value.y * k, r.value.ancho * k, r.value.alto * k)
     }
-  }, [foto, panos, calculados])
+  }, [foto, panos, calculados, paso])
 
   useEffect(() => {
     if (pedidoRef.current !== null) cancelAnimationFrame(pedidoRef.current)
@@ -241,8 +274,11 @@ export default function Pagina() {
     setAviso(null)
     try {
       setFoto(await normalizarFoto(archivo))
+      setReferencia(null)
+      setMetrosTexto('1')
       setPanos([nuevoPano(1)])
       setActivo(0)
+      setPaso('escala')
     } catch {
       setAviso('No se pudo leer esa imagen. Probá con otra.')
     }
@@ -268,7 +304,11 @@ export default function Pagina() {
         if (k !== activo) return p
         const q = [...p.esquinas] as unknown as { x: number; y: number }[]
         q[i] = { x, y }
-        return { ...p, esquinas: q as unknown as Quad }
+        const esquinas = q as unknown as Quad
+        // Las medidas salen del cuadrilátero: mover una esquina las actualiza.
+        // Si el vendedor las corrigió a mano, la corrección dura hasta que
+        // vuelva a tocar las esquinas, que es cuando deja de ser válida.
+        return { ...p, esquinas, ...(medirDesdeEsquinas(esquinas) ?? {}) }
       }))
     }
     const soltar = () => {
@@ -280,6 +320,51 @@ export default function Pagina() {
     window.addEventListener('pointermove', mover)
     window.addEventListener('pointerup', soltar)
     window.addEventListener('pointercancel', soltar)
+  }
+
+  // ---- trazar la referencia de escala ----
+  const puntoEnFoto = (ev: { clientX: number; clientY: number }): Point | null => {
+    const caja = marcoRef.current?.getBoundingClientRect()
+    if (!caja || caja.width === 0 || caja.height === 0) return null
+    return {
+      x: Math.min(1, Math.max(0, (ev.clientX - caja.left) / caja.width)),
+      y: Math.min(1, Math.max(0, (ev.clientY - caja.top) / caja.height)),
+    }
+  }
+
+  const alTrazar = (ev: React.PointerEvent<HTMLDivElement>) => {
+    ev.preventDefault()
+    const inicio = puntoEnFoto(ev)
+    if (!inicio) return
+    ev.currentTarget.setPointerCapture(ev.pointerId)
+    setTrazando(true)
+    setReferencia({ a: inicio, b: inicio, metros: Number(metrosTexto) || 1 })
+
+    const mover = (m: PointerEvent) => {
+      const fin = puntoEnFoto(m)
+      if (fin) setReferencia((r) => (r ? { ...r, b: fin } : r))
+    }
+    const soltar = () => {
+      window.removeEventListener('pointermove', mover)
+      window.removeEventListener('pointerup', soltar)
+      window.removeEventListener('pointercancel', soltar)
+      setTrazando(false)
+    }
+    window.addEventListener('pointermove', mover)
+    window.addEventListener('pointerup', soltar)
+    window.addEventListener('pointercancel', soltar)
+  }
+
+  const errorEscala = useMemo(() => {
+    if (!foto || !referencia) return null
+    const r = pixelesPorMetro(referencia, foto.ancho, foto.alto)
+    return r.ok ? null : mensajeDeErrorEscala(r.error)
+  }, [foto, referencia])
+
+  const confirmarEscala = () => {
+    if (escala === null) return
+    setPanos((prev) => prev.map((p) => ({ ...p, ...(medirDesdeEsquinas(p.esquinas) ?? {}) })))
+    setPaso('trabajo')
   }
 
   // ---- compartir ----
@@ -302,7 +387,10 @@ export default function Pagina() {
   }
 
   const agregar = () => {
-    setPanos((prev) => [...prev, nuevoPano(Math.max(...prev.map((p) => p.id)) + 1, prev[prev.length - 1])])
+    setPanos((prev) => {
+      const p = nuevoPano(Math.max(...prev.map((x) => x.id)) + 1, prev[prev.length - 1])
+      return [...prev, { ...p, ...(medirDesdeEsquinas(p.esquinas) ?? {}) }]
+    })
     setActivo(panos.length)
   }
   const quitar = () => {
@@ -316,8 +404,9 @@ export default function Pagina() {
 
   return (
     <main className="app">
-      <input ref={archivoRef} type="file" accept="image/*" capture="environment"
-        onChange={alElegirFoto} hidden />
+      {/* Sin `capture`: así el teléfono ofrece cámara Y galería en vez de forzar
+          la cámara. La foto puede venir de cualquiera de las dos. */}
+      <input ref={archivoRef} type="file" accept="image/*" onChange={alElegirFoto} hidden />
 
       <header className="barra">
         <img src="/marca/plasmart-logo-white.png" alt="Plasmart" />
@@ -325,20 +414,62 @@ export default function Pagina() {
       </header>
 
       <div className="lienzo">
-        {!foto ? (
+        {paso === 'foto' || !foto ? (
           <div className="vacio">
             <Kicker>Paso 1 de 3</Kicker>
-            <h1>Sacá la foto del <em>frente</em></h1>
-            <p>Parate enfrente y encuadrá derecho. Después marcás las esquinas de cada paño.</p>
+            <h1>Sacá o subí la foto del <em>frente</em></h1>
+            <p>Parate enfrente y encuadrá derecho. Si ya la tenés en el teléfono, elegila de la galería.</p>
             <Button variant="solid" size="md" icon="camera" onClick={() => archivoRef.current?.click()}>
-              Sacar foto
+              Elegir foto
             </Button>
             {aviso && <p style={{ color: 'var(--accent)' }}>{aviso}</p>}
           </div>
         ) : (
           <div ref={marcoRef} style={{ position: 'relative', display: 'inline-block', maxWidth: '100%', maxHeight: '100%', lineHeight: 0 }}>
             <canvas ref={canvasRef} />
-            {pano.esquinas.map((p, i) => (
+
+            {paso === 'escala' && (
+              <>
+                <div className="capa-escala" onPointerDown={alTrazar}>
+                  <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+                    {referencia && (() => {
+                      const { a, b } = referencia
+                      // Los topes van perpendiculares a la línea, como una cinta
+                      // métrica. El viewBox no conserva la proporción, así que
+                      // el largo visual se calcula en unidades del viewBox.
+                      const dx = (b.x - a.x) * 100
+                      const dy = (b.y - a.y) * 100
+                      const largo = Math.hypot(dx, dy) || 1
+                      const nx = (-dy / largo) * 2.5
+                      const ny = (dx / largo) * 2.5
+                      return (
+                        <g>
+                          <line className="regla-linea"
+                            x1={a.x * 100} y1={a.y * 100} x2={b.x * 100} y2={b.y * 100} />
+                          <line className="regla-tope"
+                            x1={a.x * 100 - nx} y1={a.y * 100 - ny}
+                            x2={a.x * 100 + nx} y2={a.y * 100 + ny} />
+                          <line className="regla-tope"
+                            x1={b.x * 100 - nx} y1={b.y * 100 - ny}
+                            x2={b.x * 100 + nx} y2={b.y * 100 + ny} />
+                          <circle className="regla-punta" cx={a.x * 100} cy={a.y * 100} r="1.4" />
+                          <circle className="regla-punta" cx={b.x * 100} cy={b.y * 100} r="1.4" />
+                        </g>
+                      )
+                    })()}
+                  </svg>
+                </div>
+                {!trazando && (
+                  <div className="pista">
+                    {referencia
+                      ? 'Arrastrá de nuevo para corregir la línea'
+                      : 'Arrastrá sobre algo que sepas cuánto mide'}
+                  </div>
+                )}
+              </>
+            )}
+
+            {paso === 'trabajo' && pano.esquinas.map((p, i) => (
               <button key={i} className="manija" data-activa={arrastrando === i}
                 aria-label={`Esquina ${i + 1} del paño ${activo + 1}`}
                 style={{ left: `${p.x * 100}%`, top: `${p.y * 100}%` }}
@@ -349,11 +480,79 @@ export default function Pagina() {
       </div>
 
       <div className="panel">
+        {paso === 'escala' && (
+          <>
+            <div className="bloque">
+              <Kicker>Paso 2 de 3</Kicker>
+              <p style={{ margin: '12px 0 0', fontSize: 'var(--fs-sm)', color: 'var(--text)', lineHeight: 1.55 }}>
+                Marcá sobre la foto algo de lo que sepas la medida y decime cuánto
+                mide. Con eso la app calcula sola el tamaño de cada paño.
+              </p>
+              <p style={{ margin: '10px 0 0', fontSize: 'var(--fs-xs)', color: 'var(--muted)', lineHeight: 1.55 }}>
+                Sirve el alto de una puerta, el ancho de un portón, una hilada de
+                ladrillos. Marcalo sobre la misma pared donde van a ir los paños:
+                en una foto, un metro de cerca ocupa más píxeles que uno de lejos.
+              </p>
+            </div>
+
+            <div className="bloque">
+              <span className="titulo">Esa línea mide</span>
+              <div className="medida">
+                <div className="campo">
+                  <label htmlFor="metros">Metros</label>
+                  <input id="metros" type="number" inputMode="decimal" min={0.1} max={50} step={0.1}
+                    value={metrosTexto}
+                    onChange={(e) => {
+                      setMetrosTexto(e.target.value)
+                      const n = Number(e.target.value)
+                      if (Number.isFinite(n) && n > 0) {
+                        setReferencia((r) => (r ? { ...r, metros: n } : r))
+                      }
+                    }} />
+                </div>
+                <Button variant="solid" size="sm" icon="arrow-right"
+                  disabled={escala === null} onClick={confirmarEscala}>
+                  Listo
+                </Button>
+              </div>
+              {errorEscala && (
+                <p style={{ margin: '12px 0 0', color: 'var(--accent)', fontSize: 'var(--fs-sm)', lineHeight: 1.5 }}>
+                  {errorEscala}
+                </p>
+              )}
+              {escala !== null && (
+                <p style={{ margin: '12px 0 0', color: 'var(--muted)', fontSize: 'var(--fs-xs)',
+                            fontFamily: 'var(--font-mono)', letterSpacing: '.06em' }}>
+                  {numero(escala, 0)} px por metro
+                </p>
+              )}
+            </div>
+
+            <div className="pie">
+              <Button variant="outline" size="sm" icon="camera" onClick={() => archivoRef.current?.click()}>
+                Otra foto
+              </Button>
+            </div>
+          </>
+        )}
+
+        {paso === 'trabajo' && (
+        <>
         <div className="numeros">
           <div><Stat size="30px" value={numero(total.superficie, 2)} unit="m²" label="Superficie total" /></div>
           <div><Stat size="30px" value={porcentaje(total.areaLibre)} unit="%" label="Área libre" /></div>
           <div><Stat size="30px" value={numero(total.peso, 1)} unit="kg" label="Peso del conjunto" /></div>
           <div><Stat size="30px" value={String(total.panos)} unit={`· ${numero(total.chapas, 1)}`} label="Paños · chapas" /></div>
+        </div>
+
+        <div className="bloque">
+          <span className="titulo">Escala de la foto</span>
+          <div className="escala-actual">
+            <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--text)' }}>
+              {referencia ? `La línea marcada mide ${numero(referencia.metros, 2)} m` : 'Sin referencia'}
+            </span>
+            <Button variant="ghost" size="sm" onClick={() => setPaso('escala')}>Corregir →</Button>
+          </div>
         </div>
 
         <div className="bloque">
@@ -382,7 +581,7 @@ export default function Pagina() {
         )}
 
         <div className="bloque">
-          <span className="titulo">Medidas del paño {activo + 1}</span>
+          <span className="titulo">Medidas del paño {activo + 1} · de la escala</span>
           <div className="campos">
             <div className="campo">
               <label htmlFor="ancho">Ancho (cm)</label>
@@ -395,6 +594,10 @@ export default function Pagina() {
                 onChange={(e) => cambiar({ altoCm: Math.max(1, Number(e.target.value) || 0) })} />
             </div>
           </div>
+          <p style={{ margin: '12px 0 0', fontSize: 'var(--fs-xs)', color: 'var(--muted)', lineHeight: 1.5 }}>
+            Salen solas del cuadrilátero y de la escala. Si las corregís a mano,
+            la corrección vale hasta que vuelvas a mover una esquina.
+          </p>
         </div>
 
         <div className="bloque">
@@ -473,6 +676,8 @@ export default function Pagina() {
             misma chapa y bajar el número.
           </p>
         </div>
+        </>
+        )}
       </div>
     </main>
   )
