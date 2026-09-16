@@ -33,6 +33,13 @@ import {
   type TransformePatron,
 } from '../src/lib/pattern/ajuste.js'
 import type { Piramide } from '../src/lib/pattern/piramide.js'
+import {
+  NOMBRE_PRESET,
+  PRESETS,
+  presupuestar,
+  textoDelAviso,
+  type Preset,
+} from '../src/lib/engines/index.js'
 import type { Linea } from '../src/lib/pattern/types.js'
 import { COLOR_MATERIAL, renderizarPano } from '../src/lib/render/index.js'
 import { calcular } from '../src/lib/takeoff/index.js'
@@ -106,6 +113,12 @@ export default function Pagina() {
   const [referencia, setReferencia] = useState<Referencia | null>(null)
   const [metrosTexto, setMetrosTexto] = useState('1')
   const [trazando, setTrazando] = useState(false)
+  const [motorConfig, setMotorConfig] = useState<{ configurado: boolean; costoPorRenderUsd: number } | null>(null)
+  const [modalRender, setModalRender] = useState(false)
+  const [preset, setPreset] = useState<Preset>('tarde')
+  const [rendersHechos, setRendersHechos] = useState(0)
+  const [ambientando, setAmbientando] = useState(false)
+  const [avisoRender, setAvisoRender] = useState<string | null>(null)
   const [panos, setPanos] = useState<PanoEnFoto[]>([nuevoPano(1)])
   const [activo, setActivo] = useState(0)
   const [catalogo, setCatalogo] = useState<ModeloCatalogo[]>([])
@@ -147,6 +160,15 @@ export default function Pagina() {
 
   // ---- catálogo ----
   useEffect(() => { cargarIndice().then(setCatalogo).catch((e) => setAviso(String(e))) }, [])
+
+  // Si hay motor de imagen y a qué costo. Lo contesta el servidor, que es el
+  // único que ve la clave.
+  useEffect(() => {
+    fetch('/api/ambientar')
+      .then((r) => r.json())
+      .then(setMotorConfig)
+      .catch(() => setMotorConfig({ configurado: false, costoPorRenderUsd: 0 }))
+  }, [])
 
   useEffect(() => {
     if (catalogo.length === 0) return
@@ -211,6 +233,29 @@ export default function Pagina() {
       areaLibre: superficie > 0 ? 1 - metal / superficie : 0,
     }
   }, [panos, calculados])
+
+  /**
+   * El despiece que daría CADA formato de chapa, para poder elegir viendo el
+   * desperdicio en vez de a ciegas. El calce nunca es perfecto y la diferencia
+   * entre un formato y otro puede ser grande.
+   */
+  const opcionesDeChapa = useMemo(() => {
+    const m = catalogo.find((c) => c.id === pano.modeloId)
+    if (!m) return []
+    const anchoMm = desdeCm(pano.anchoCm || 1)
+    const altoMm = desdeCm(pano.altoCm || 1)
+    const prop = m.mascaraAncho / m.mascaraAlto
+    return FORMATOS.map((f) => ({ formato: f, despiece: despiezar(anchoMm, altoMm, f, prop) }))
+  }, [catalogo, pano.modeloId, pano.anchoCm, pano.altoCm])
+
+  /** La que menos tira. Lo que se paga es la chapa entera, así que el
+   *  desperdicio ES el costo, y por eso va marcada. */
+  const mejorOpcion = useMemo(() => {
+    if (opcionesDeChapa.length === 0) return null
+    return opcionesDeChapa.reduce((a, b) =>
+      b.despiece.desperdicio < a.despiece.desperdicio - 0.005 ? b : a,
+    )
+  }, [opcionesDeChapa])
 
   const validez = useMemo(() => validarQuad(pano.esquinas), [pano.esquinas])
 
@@ -365,6 +410,38 @@ export default function Pagina() {
     if (escala === null) return
     setPanos((prev) => prev.map((p) => ({ ...p, ...(medirDesdeEsquinas(p.esquinas) ?? {}) })))
     setPaso('trabajo')
+  }
+
+  // ---- ambientación (fase 2) ----
+  const presupuesto = useMemo(() => presupuestar(
+    { nombre: 'motor', version: '1', costoPorRenderUsd: motorConfig?.costoPorRenderUsd ?? 0,
+      ambientar: () => Promise.reject(new Error('n/a')) },
+    rendersHechos,
+  ), [motorConfig, rendersHechos])
+
+  const ambientar = async () => {
+    setModalRender(false)
+    setAmbientando(true)
+    setAvisoRender(null)
+    try {
+      const r = await fetch('/api/ambientar', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ preset, semilla: 1 }),
+      })
+      const datos = await r.json()
+      if (!r.ok || !datos.ok) {
+        // La ausencia de ambientación se degrada mostrando el render exacto con
+        // un aviso discreto. Nunca un error.
+        setAvisoRender('La ambientación todavía no está configurada. Lo que ves es el render exacto.')
+        return
+      }
+      setRendersHechos((n) => n + 1)
+    } catch {
+      setAvisoRender('Sin conexión para ambientar. Lo que ves es el render exacto.')
+    } finally {
+      setAmbientando(false)
+    }
   }
 
   // ---- compartir ----
@@ -628,19 +705,41 @@ export default function Pagina() {
               <span style={{ color: 'var(--muted)' }}> · {resumenMaterial(calc.despiece)}</span>
             </p>
           )}
-          <div className="segmentado">
-            <button aria-pressed={pano.formato === 'auto'} onClick={() => cambiar({ formato: 'auto' })}>
-              La que convenga
+          <div className="opciones">
+            <button className="opcion" aria-pressed={pano.formato === 'auto'}
+              onClick={() => cambiar({ formato: 'auto' })}>
+              <span>La que convenga</span>
+              <span className="dato">{calc ? `→ ${calc.chapa.nombre}` : ''}</span>
             </button>
-            {FORMATOS.map((f) => (
-              <button key={f.nombre} aria-pressed={pano.formato === f.nombre}
-                onClick={() => cambiar({ formato: f.nombre })}>{f.nombre}</button>
-            ))}
+            {opcionesDeChapa.map(({ formato, despiece }) => {
+              const esLaMejor = mejorOpcion?.formato.nombre === formato.nombre
+              return (
+                <button key={formato.nombre} className="opcion"
+                  aria-pressed={pano.formato === formato.nombre}
+                  onClick={() => cambiar({ formato: formato.nombre })}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                    {formato.nombre}
+                    {esLaMejor && opcionesDeChapa.length > 1 && (
+                      <span className="marca">la que menos tira</span>
+                    )}
+                  </span>
+                  <span className="dato">
+                    {despiece.total} {despiece.total === 1 ? 'paño' : 'paños'}
+                    {' · '}
+                    <span className={esLaMejor ? undefined : 'malo'}>
+                      {porcentaje(despiece.desperdicio)}% de desperdicio
+                    </span>
+                  </span>
+                </button>
+              )
+            })}
           </div>
           <p style={{ margin: '12px 0 0', fontSize: 'var(--fs-xs)', color: 'var(--muted)', lineHeight: 1.5 }}>
-            La superficie se reparte en paños iguales, cada uno cortado de una
-            chapa de medida comercial. El dibujo escala a la chapa, así que el
-            motivo tiene el tamaño que va a tener de verdad.
+            El desperdicio es aproximado y es lo que se paga: la chapa se compra
+            entera. Ojo que menos paños no es menos material — una chapa grande
+            puede dejar menos juntas y bastante más recorte. El calce nunca es
+            perfecto, y un anidado de producción puede sacar dos paños angostos
+            de la misma chapa y bajarlo.
           </p>
         </div>
 
@@ -656,7 +755,11 @@ export default function Pagina() {
         </div>
 
         <div className="pie">
-          <Button variant="solid" size="sm" icon="share" disabled={!foto} onClick={compartir}>
+          <Button variant="solid" size="sm" icon="arrow-up-right" disabled={!foto || ambientando}
+            onClick={() => { setAvisoRender(null); setModalRender(true) }}>
+            {ambientando ? 'Renderizando…' : 'Renderizar'}
+          </Button>
+          <Button variant="outline" size="sm" icon="share" disabled={!foto} onClick={compartir}>
             Compartir
           </Button>
           {foto && (
@@ -666,6 +769,14 @@ export default function Pagina() {
           )}
           <Tag>Estimado</Tag>
         </div>
+
+        {avisoRender && (
+          <div className="bloque">
+            <p style={{ margin: 0, color: 'var(--muted)', fontSize: 'var(--fs-sm)', lineHeight: 1.55 }}>
+              {avisoRender}
+            </p>
+          </div>
+        )}
 
         <div className="bloque">
           <p className="aviso" style={{ margin: 0 }}>
@@ -679,6 +790,44 @@ export default function Pagina() {
         </>
         )}
       </div>
+
+      {modalRender && (
+        <div className="telon" role="dialog" aria-modal="true" aria-labelledby="t-render"
+          onClick={(e) => { if (e.target === e.currentTarget) setModalRender(false) }}>
+          <div className="modal">
+            <Kicker>Vista definitiva</Kicker>
+            <h2 id="t-render">Esto se cobra por <em style={{ fontStyle: 'normal', color: 'var(--accent)' }}>render</em></h2>
+
+            <p>{textoDelAviso(presupuesto)}</p>
+
+            <p className="suave">
+              El render que ya estás viendo es exacto y no cuesta nada. Esto
+              agrega luz, sombra y ambiente encima. El dibujo, las medidas y el
+              despiece no cambian.
+            </p>
+
+            <div style={{ marginTop: 20 }}>
+              <span className="titulo" style={{ display: 'block', marginBottom: 10 }}>Momento del día</span>
+              <div className="segmentado">
+                {PRESETS.map((k) => (
+                  <button key={k} aria-pressed={preset === k} onClick={() => setPreset(k)}>
+                    {NOMBRE_PRESET[k]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="acciones">
+              <Button variant="solid" size="sm" icon="arrow-right" onClick={ambientar}>
+                Sí, renderizar
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setModalRender(false)}>
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }

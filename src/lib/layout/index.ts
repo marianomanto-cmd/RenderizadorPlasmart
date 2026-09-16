@@ -152,8 +152,16 @@ export function despiezar(
 }
 
 /**
- * Elige el formato que necesita menos chapas. Con empate gana el más chico, que
- * es más fácil de manejar y de transportar.
+ * Elige el formato que MENOS DESPERDICIA.
+ *
+ * Antes elegía el que necesitaba menos chapas, y estaba mal: menos chapas no es
+ * menos material. Una pared de 4,35 m de ancho por 2 m sale en 5 paños de la
+ * chapa de 1000 comprando 10 m², o en 3 paños de la de 1500 comprando 13,5 m².
+ * Menos paños, un tercio más de material y de plata.
+ *
+ * Lo que se paga es la chapa entera, así que el desperdicio es el costo. Con
+ * empate gana la que necesita menos paños, que son menos juntas y menos trabajo
+ * de montaje; y si también empatan, la más chica, más fácil de manejar.
  */
 export function mejorFormato(
   ancho: Mm,
@@ -161,13 +169,15 @@ export function mejorFormato(
   propModelo: number,
   formatos: readonly FormatoChapa[] = FORMATOS,
 ): FormatoChapa {
+  const TOLERANCIA = 0.005 // medio punto de desperdicio es un empate
   let mejor = formatos[0]!
-  let mejorDespiece = despiezar(ancho, alto, mejor, propModelo)
+  let mejorD = despiezar(ancho, alto, mejor, propModelo)
   for (const f of formatos.slice(1)) {
     const d = despiezar(ancho, alto, f, propModelo)
-    if (d.total < mejorDespiece.total) {
+    const diferencia = mejorD.desperdicio - d.desperdicio
+    if (diferencia > TOLERANCIA || (Math.abs(diferencia) <= TOLERANCIA && d.total < mejorD.total)) {
       mejor = f
-      mejorDespiece = d
+      mejorD = d
     }
   }
   return mejor

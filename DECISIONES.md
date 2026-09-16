@@ -336,6 +336,51 @@ pero **no se puede**: la escala se define antes de que exista ningún paño, que
 es el orden que pide el negocio. Queda anotada por si algún día se quiere
 refinar la medida de un paño ya marcado.
 
+## Elegir chapa es elegir desperdicio, no cantidad de paños
+
+La app muestra, para cada formato, cuántos paños salen y **cuánto se tira**, y
+marca el que menos tira. El calce nunca es perfecto y la diferencia entre un
+formato y otro es grande.
+
+El caso que destapó un error real, una pared de 4,35 × 2,00 m:
+
+| Chapa | Paños | Compra | Desperdicio |
+|---|---|---|---|
+| 1000 × 2000 | 5 de 87 cm | 10 m² | **13,0%** |
+| 1220 × 2440 | 4 de 108,7 cm | 11,9 m² | 26,9% |
+| 1500 × 3000 | 3 de 145 cm | 13,5 m² | 35,6% |
+
+"La que convenga" elegía **menos paños**, o sea la de 1500 — la que más tira, un
+tercio más de material y de plata. **Menos chapas no es menos material.** Ahora
+elige por desperdicio, y con empate por menos paños, que son menos juntas y
+menos montaje. Hay un test con este caso exacto.
+
+## La ambientación: botón aparte y con el costo a la vista
+
+El render exacto es gratis y es el que se ve siempre. La ambientación es un
+botón **Renderizar** aparte, que el vendedor aprieta cuando quiere, y antes
+aparece un aviso con lo que sale y lo que lleva gastado en la sesión.
+
+**El costo sale de configuración, no del código.** Los precios cambian, y una
+cifra inventada en la pantalla es peor que ninguna porque el vendedor decide
+sobre un número falso. Si no está configurado, el aviso lo dice en vez de
+mostrar cero. Va en la variable de entorno `COSTO_RENDER_USD`.
+
+La clave del motor (`OPENAI_API_KEY`) se lee **solo en el servidor**, en
+`app/api/ambientar/route.ts`. Nunca llega al navegador.
+
+Mientras no haya motor, todo el camino existe igual y la ausencia se degrada
+mostrando el render exacto con un aviso discreto. Eso no es un caso de borde: es
+el comportamiento normal de hoy, y por eso el camino se construyó antes que el
+motor.
+
+### Lo que falta antes de enchufar el motor de verdad
+
+El oráculo de fidelidad. Un modelo de imagen no reproduce geometría: devuelve
+algo que *parece* chapa cortada, con el dibujo corrido y las juntas inventadas.
+La salida tiene que pasar por una medición que diga si respetó el dibujo y el
+despiece; si no pasa, se descarta y se muestra el render exacto.
+
 ## Rendimiento del render, medido
 
 Paño de 714 x 420 px sobre una foto de 1200 x 800, modelo B.01, en este

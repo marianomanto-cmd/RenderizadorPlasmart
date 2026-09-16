@@ -199,3 +199,50 @@ describe('la chapa de 1500 × 3000', () => {
     expect(mejorFormato(desdeCm(90), desdeCm(180), PROP_1A2).nombre).toBe('1000 × 2000')
   })
 })
+
+describe('elegir formato es elegir desperdicio, no cantidad de paños', () => {
+  // El caso que destapó el error: una pared de 4,35 m de ancho.
+  const ANCHO = desdeCm(435)
+  const ALTO = desdeCm(200)
+
+  it('cada formato da un despiece distinto y conviene verlos todos', () => {
+    const d1000 = despiezar(ANCHO, ALTO, FORMATOS[0]!, PROP_1A2)
+    const d1220 = despiezar(ANCHO, ALTO, FORMATOS[1]!, PROP_1A2)
+    const d1500 = despiezar(ANCHO, ALTO, FORMATOS[2]!, PROP_1A2)
+
+    expect(d1000.total).toBe(5)
+    expect(d1220.total).toBe(4)
+    expect(d1500.total).toBe(3)
+
+    expect(d1000.desperdicio).toBeCloseTo(0.13, 3)
+    expect(d1220.desperdicio).toBeCloseTo(0.2695, 3)
+    expect(d1500.desperdicio).toBeCloseTo(0.3556, 3)
+  })
+
+  it('MENOS paños NO es menos material: la de 1500 usa un tercio más', () => {
+    const d1000 = despiezar(ANCHO, ALTO, FORMATOS[0]!, PROP_1A2)
+    const d1500 = despiezar(ANCHO, ALTO, FORMATOS[2]!, PROP_1A2)
+    expect(d1500.total).toBeLessThan(d1000.total)
+    expect(d1500.superficieComprada).toBeGreaterThan(d1000.superficieComprada)
+    expect(d1500.superficieComprada / d1000.superficieComprada).toBeCloseTo(1.35, 2)
+  })
+
+  it('así que elige la de 1000, que es la que menos tira', () => {
+    expect(mejorFormato(ANCHO, ALTO, PROP_1A2).nombre).toBe('1000 × 2000')
+  })
+
+  it('con desperdicio parejo gana la de menos paños, que son menos juntas', () => {
+    // 3,00 x 2,00: la de 1000 da 3 paños y 0% de desperdicio; la de 1500 da 2
+    // paños y 33%. Gana la de 1000 igual, porque el desperdicio manda.
+    const a = desdeCm(300)
+    const b = desdeCm(200)
+    expect(despiezar(a, b, FORMATOS[0]!, PROP_1A2).desperdicio).toBeCloseTo(0, 6)
+    expect(mejorFormato(a, b, PROP_1A2).nombre).toBe('1000 × 2000')
+  })
+
+  it('cuando el paño no entra en las chicas, elige la única donde entra', () => {
+    // 2,72 x 2,64 m: 2,64 de alto no sale de una chapa de 2000 ni de 2440 sin
+    // partirlo en dos filas, y eso desperdicia muchísimo más.
+    expect(mejorFormato(desdeCm(272), desdeCm(264), PROP_1A2).nombre).toBe('1500 × 3000')
+  })
+})
