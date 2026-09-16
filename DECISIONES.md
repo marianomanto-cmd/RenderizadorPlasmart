@@ -424,6 +424,63 @@ La solución es guardar el dibujo también a la mitad, a un cuarto, a un octavo,
 leer el nivel que corresponde al tamaño en pantalla. Así el promedio conserva la
 estructura. Es lo que hace cualquier motor de texturas desde hace cuarenta años.
 
+## La pantalla del teléfono: un marco fijo, no una página larga
+
+Reporte del vendedor: *"en mobile es todo un desastre, la imagen es más grande
+que la ventana y no puedo hacer scroll"*. Eran dos errores míos, encadenados.
+
+**Uno.** El canvas tenía `max-width: 100%; max-height: 100%`, que parece
+razonable y no hace nada. El porcentaje se mide contra el alto del padre, el
+padre tenía alto automático, y el alto automático se mide contra el hijo. El
+navegador descarta la regla y el canvas sale a tamaño de la foto: 2600 píxeles
+de alto adentro de una ventana de 844.
+
+No se arregla poniendo la proporción en el padre y confiando en `max-height`
+—probado, el marco sigue desbordando— porque el porcentaje sigue siendo
+circular. Se arregla cortando la circularidad: `container-type: size` hace que
+el lienzo deje de medirse por lo que tiene adentro, y con eso `cqw`/`cqh`
+pasan a ser números reales. El encuadre queda escrito a mano y sin ambigüedad:
+
+```css
+.marco { width: min(100cqw, calc(100cqh * var(--ar))); aspect-ratio: var(--ar); }
+```
+
+La proporción la pone la página, porque sale de la foto. Y el marco tiene que
+ser **exactamente** la foto dibujada, sin franjas negras propias: las manijas y
+la línea de escala se ubican en porcentaje de esa caja, y el arrastre la lee con
+`getBoundingClientRect`. Si el marco sobra, la geometría miente.
+
+**Dos.** `touch-action: none` en todo el lienzo. Lo había puesto para que
+arrastrar una esquina no scrolleara la página, pero lo apliqué a la zona de la
+foto entera, que en un teléfono es media pantalla. El dedo apoyado ahí no movía
+nada. Ahora va `pinch-zoom`: el arrastre ya está protegido en la manija misma, y
+acercar la celosía con dos dedos es justamente lo que uno hace para mostrársela
+a alguien.
+
+De paso, el reparto. La app pasa a ser un marco de alto fijo (`height: 100dvh`,
+`overflow: hidden`) con un solo elemento que scrollea, el panel. El documento no
+scrollea nunca. Esto es deliberado y no es solo higiene: si la página scrolleara,
+tocar un control empujaría la foto fuera de la pantalla, y la foto es lo que el
+cliente está mirando.
+
+El panel toma lo que necesita hasta 54dvh y de ahí scrollea solo; el lienzo se
+queda con el resto, con un piso de 30dvh. Pero con los dos repartiéndose una
+pantalla de 640, una foto vertical quedaba en 133 × 230: correcta y inservible.
+Por eso el panel se pliega a su tirador y la foto se lleva la pantalla —de
+133 × 230 a 295 × 511—, que es el momento de dársela a mirar al cliente. Cambiar
+de paso lo despliega de nuevo, para que nadie se quede buscando dónde cargar el
+número.
+
+Con el teléfono acostado quedan 390 píxeles de alto y apilar deja al panel en una
+ranura, así que ahí entra el mismo dos-columnas del escritorio.
+
+Verificado en el navegador a 390×844, 390×844 con foto apaisada, 360×640,
+844×390 y 1440×900: 107 comprobaciones sobre el documento que no scrollea, la
+foto que entra en el lienzo, la caja del marco que coincide con la foto, el panel
+que llega a su último bloque, el modal que no lo recorta el `overflow: hidden`, y
+el arrastre de una manija que mueve la esquina sin mover la página. La barrida de
+objetivos táctiles encontró de paso las pestañas del catálogo en 36px; van a 44.
+
 ## Despliegue
 
 Proyecto de Vercel `renderizador-plasmart`, enganchado al repo. Cada push a la

@@ -113,6 +113,7 @@ export default function Pagina() {
   const [referencia, setReferencia] = useState<Referencia | null>(null)
   const [metrosTexto, setMetrosTexto] = useState('1')
   const [trazando, setTrazando] = useState(false)
+  const [plegado, setPlegado] = useState(false)
   const [motorConfig, setMotorConfig] = useState<{ configurado: boolean; costoPorRenderUsd: number } | null>(null)
   const [modalRender, setModalRender] = useState(false)
   const [preset, setPreset] = useState<Preset>('tarde')
@@ -126,6 +127,10 @@ export default function Pagina() {
   const [arrastrando, setArrastrando] = useState<number | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
   const [cargadas, setCargadas] = useState(0)
+
+  // Cambiar de paso devuelve los controles: si quedaran plegados, el vendedor
+  // pasa a medir y no encuentra dónde cargar el número.
+  useEffect(() => { setPlegado(false) }, [paso])
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const marcoRef = useRef<HTMLDivElement>(null)
@@ -502,7 +507,11 @@ export default function Pagina() {
             {aviso && <p style={{ color: 'var(--accent)' }}>{aviso}</p>}
           </div>
         ) : (
-          <div ref={marcoRef} style={{ position: 'relative', display: 'inline-block', maxWidth: '100%', maxHeight: '100%', lineHeight: 0 }}>
+          // La proporción va acá y no en la hoja de estilos porque sale de la foto.
+          // Con ella el marco se achica por el eje que sobre y nunca desborda el
+          // lienzo, que es lo que hacía que en el teléfono la imagen se saliera.
+          <div ref={marcoRef} className="marco"
+            style={{ '--ar': foto.ancho / foto.alto } as React.CSSProperties}>
             <canvas ref={canvasRef} />
 
             {paso === 'escala' && (
@@ -556,7 +565,18 @@ export default function Pagina() {
         )}
       </div>
 
-      <div className="panel">
+      {paso !== 'foto' && foto && (
+      <div className={`panel${plegado ? ' plegado' : ''}`}>
+        {/* En el teléfono la foto y los controles se pelean la pantalla. Esto
+            deja elegir: plegado, la foto ocupa todo y se le muestra al cliente;
+            desplegado, se trabaja. Al lado (pantalla grande) no hace falta. */}
+        <button className="tirador" onClick={() => setPlegado((v) => !v)}
+          aria-expanded={!plegado} aria-controls="controles">
+          <span>{plegado ? 'Volver a los controles' : 'Ver la foto entera'}</span>
+          <span aria-hidden="true">{plegado ? '↑' : '↓'}</span>
+        </button>
+
+        <div className="controles" id="controles">
         {paso === 'escala' && (
           <>
             <div className="bloque">
@@ -789,7 +809,9 @@ export default function Pagina() {
         </div>
         </>
         )}
+        </div>
       </div>
+      )}
 
       {modalRender && (
         <div className="telon" role="dialog" aria-modal="true" aria-labelledby="t-render"
